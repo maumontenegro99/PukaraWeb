@@ -48,7 +48,7 @@ cd backend
 # Comando para iniciar SpringBoot (ejemplo)
 ./mvnw spring-boot:run
 
-**2. Cliente Frontend:**
+2. Cliente Frontend:
 
 cd frontend
 npm run dev
