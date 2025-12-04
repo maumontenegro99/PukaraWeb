@@ -47,12 +47,13 @@ Como es un proyecto dividido, necesitas correr dos terminales simultáneamente:
 cd backend
 # Comando para iniciar SpringBoot (ejemplo)
 ./mvnw spring-boot:run
+```
 
-2. Cliente Frontend:
-
+**2. Cliente Frontend:**
+```bash
 cd frontend
 npm run dev
-
+```
 "El verdadero camino para conseguir la felicidad pasa por hacer felices a los demás. Intentad dejar este mundo un poco mejor de como os lo encontrasteis." > — Baden-Powell
 
 Desarrollado con ❤️ para Pukara Weche - 2025
