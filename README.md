@@ -54,6 +54,6 @@ cd backend
 cd frontend
 npm run dev
 ```
-"El verdadero camino para conseguir la felicidad pasa por hacer felices a los demás. Intentad dejar este mundo un poco mejor de como os lo encontrasteis." > — Baden-Powell
+"El verdadero camino para conseguir la felicidad pasa por hacer felices a los demás. Intenta dejar este mundo un poco mejor de como lo encontraste." > — Baden-Powell
 
 Desarrollado con ❤️ para Pukara Weche - 2025
