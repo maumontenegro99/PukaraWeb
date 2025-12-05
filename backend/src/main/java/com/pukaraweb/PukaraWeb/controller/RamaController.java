@@ -18,7 +18,7 @@ import com.pukaraweb.PukaraWeb.service.RamaService;
 
 @RestController
 @RequestMapping("/api/ramas")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:5173")
 public class RamaController {
 
     @Autowired

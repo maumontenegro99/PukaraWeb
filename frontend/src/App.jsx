@@ -1,15 +1,21 @@
 // src/App.jsx
-
-// 1. IMPORTANTE: Traemos el bloque Home desde su archivo
-import Home from './pages/Home'; 
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout'; // <--- Importante
+import Home from './pages/Home';
+import Ramas from './pages/Ramas';
 
 function App() {
   return (
-    <div>
-      {/* 2. Usamos el componente como si fuera una etiqueta HTML nueva */}
-      <Home />
-    </div>
-  )
+    <Router>
+      <Layout> {/* El Layout envuelve todo */}
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/ramas" element={<Ramas />} />
+        </Routes>
+      </Layout>
+    </Router>
+  );
 }
 
-export default App
+export default App;
