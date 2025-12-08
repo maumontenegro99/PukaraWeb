@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import miFondoLocal from '../assets/fondo-scout.jpg'; 
+import insignia from '../assets/insignia.png';
+import iconFacebook from '../assets/icon-facebook.png'; 
+import iconInstagram from '../assets/icon-instagram.png';
+import iconMail from '../assets/icon-mail.png';
+import iconMap from '../assets/icon-map.png';
+import iconAsosiacion from '../assets/logo-asosiacion.png';
 
 const colors = {
   primaryCyan: '#00B4D8',
@@ -11,7 +17,6 @@ const colors = {
 };
 
 function Layout({ children }) {
-  // --- LÓGICA DEL MENÚ (Movida desde Home) ---
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -27,13 +32,12 @@ function Layout({ children }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Función para navegar y cerrar menú al mismo tiempo
   const handleNavigation = (path) => {
     setMenuOpen(false);
     navigate(path);
   };
 
-  // --- ESTILOS GLOBALES ---
+  // --- ESTILOS ---
   const pageBackgroundStyle = {
     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1,
     backgroundImage: `url(${miFondoLocal})`,
@@ -67,20 +71,59 @@ function Layout({ children }) {
     fontSize: '1.8rem', color: colors.darkText, display: isMobile ? 'block' : 'none'
   };
 
+  const appWrapperStyle = {
+    display: 'flex', flexDirection: 'column', minHeight: '100vh', 
+  };
+
   const mainContentContainer = {
-    paddingTop: '80px', // El espacio para la navbar
-    minHeight: '100vh', 
-    boxSizing: 'border-box'
+    paddingTop: '80px', flex: 1, boxSizing: 'border-box', paddingBottom: '40px' 
+  };
+
+  // --- ESTILOS DEL FOOTER ---
+  const footerStyle = {
+    backgroundColor: '#222', color: '#fff', padding: '30px 20px', textAlign: 'center',
+    borderTop: `4px solid ${colors.primaryCyan}`, marginTop: 'auto' 
+  };
+
+  const footerContentStyle = {
+    maxWidth: '1000px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', 
+    justifyContent: 'center', gap: '30px', alignItems: 'center'
+  };
+
+  const footerItemStyle = {
+    display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem',
+    color: '#ddd', textDecoration: 'none' 
+  };
+
+  const iconStyle = {
+    width: '24px', height: '24px', objectFit: 'contain', filter: 'invert(1)' 
+  };
+
+  const associationLogoStyle = {
+    height: '60px', width: 'auto', marginTop: '10px', objectFit: 'contain'
   };
 
   return (
-    <>
+    <div style={appWrapperStyle}>
       <div style={pageBackgroundStyle}></div>
 
       {/* NAVBAR */}
       <nav style={navbarStyle}>
-        <div style={{...linkStyle, fontWeight: 'bold', fontSize: '1.2rem'}} onClick={() => handleNavigation('/')}>
+        {/* LOGO + NOMBRE DEL GRUPO */}
+        <div 
+            style={{
+                ...linkStyle, 
+                fontWeight: 'bold', 
+                fontSize: '1.2rem',
+                display: 'flex',        // <--- Alineación Flex
+                alignItems: 'center',   // <--- Centrado vertical
+                gap: '10px'             // <--- Espacio entre insignia y texto
+            }} 
+            onClick={() => handleNavigation('/')}
+        >
+          {/* 2. AGREGAMOS LA IMAGEN AQUÍ */}
           PUKARA WECHE
+          <img src={insignia} alt="Logo" style={{ height: '40px', width: 'auto' }} />
         </div>
 
         <button style={hamburgerButtonStyle} onClick={() => setMenuOpen(!menuOpen)}>
@@ -96,11 +139,42 @@ function Layout({ children }) {
         </div>
       </nav>
 
-      {/* CONTENIDO DE LAS PÁGINAS */}
+      {/* CONTENIDO PRINCIPAL */}
       <main style={mainContentContainer}>
         {children}
       </main>
-    </>
+
+      {/* FOOTER */}
+      <footer style={footerStyle}>
+        <div style={footerContentStyle}>
+            <a href="https://www.facebook.com/pukaraweche" target="_blank" rel="noopener noreferrer" style={footerItemStyle}>
+                <img src={iconFacebook} alt="FB" style={iconStyle} />
+                <span>Pukara Weche</span>
+            </a>
+            <a href="https://www.instagram.com/pukaraweche" target="_blank" rel="noopener noreferrer" style={footerItemStyle}>
+                <img src={iconInstagram} alt="IG" style={iconStyle} />
+                <span>@pukaraweche</span>
+            </a>
+            <a href="mailto:pukaraweche@gmail.com" style={footerItemStyle}>
+                <img src={iconMail} alt="Mail" style={iconStyle} />
+                <span>pukaraweche@gmail.com</span>
+            </a>
+            <a href="https://maps.app.goo.gl/WWYeVVZFBZ2wPEYe7" target="_blank" rel="noopener noreferrer" style={footerItemStyle}>
+                <img src={iconMap} alt="Map" style={iconStyle} />
+                <span>Ver Ubicación</span>
+            </a>
+        </div>
+        
+        <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                © 2025 Grupo Scout Pukara Weche
+            </span>
+            <a href="https://guiasyscoutsdechile.org/" target="_blank" rel="noopener noreferrer" style={{ cursor: 'pointer' }}>
+                <img src={iconAsosiacion} alt="Asociación de Guías y Scouts de Chile" style={associationLogoStyle} />
+            </a>
+        </div>
+      </footer>
+    </div>
   );
 }
 
