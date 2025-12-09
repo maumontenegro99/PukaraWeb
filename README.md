@@ -40,9 +40,9 @@ Este proyecto está construido utilizando una arquitectura moderna de **Monorepo
 
 ## 🛠️ Requisitos
 
- * **JDK 17** Este programa usa el lenguaje Java.
- * **MYSQL 8.x** Este programa trabaja con MYSQL 8.0 para la persistencia de datos.
- * **Node.js** Al usar React + Vite, necesitas tener instalado node.js para poder ejecutarlo.
+ * **JDK 17:** Este programa usa el lenguaje Java.
+ * **MYSQL 8.x:** Este programa trabaja con MYSQL 8.0 para la persistencia de datos.
+ * **Node.js:** Al usar React + Vite, necesitas tener instalado node.js para poder ejecutarlo.
 
 ---
 
