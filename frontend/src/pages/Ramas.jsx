@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-// 1. IMPORTAMOS useLocation y useNavigate
+import { authFetch } from '../helpers/AuthFetch';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import logoAvanzada from '../assets/logo-avanzada.png';
@@ -37,8 +37,8 @@ function Ramas() {
   useEffect(() => {
     // 4. MODIFICAMOS LA CARGA: Usamos Promise.all para cargar Ramas Y Miembros
     Promise.all([
-        fetch('http://localhost:8080/api/ramas'),
-        fetch('http://localhost:8080/api/miembros') // <--- Nuevo endpoint
+        authFetch('http://localhost:8080/api/ramas'),
+        authFetch('http://localhost:8080/api/miembros') // <--- Nuevo endpoint
     ])
       .then(async ([resRamas, resMiembros]) => {
         const ramasData = await resRamas.json();
