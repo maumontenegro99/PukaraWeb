@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { authFetch } from '../helpers/AuthFetch';
 
 const ramaColors = {
   MANADA: '#fced21',
@@ -127,7 +128,7 @@ function Miembros() {
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchData();
+    authFetchData();
     if (location.state?.ramaFilterName) {
         const filtroRecibido = location.state.ramaFilterName;
         setSearchTerm(filtroRecibido);
@@ -136,13 +137,13 @@ function Miembros() {
     }
   }, []);
 
-  const fetchData = async () => {
+  const authFetchData = async () => {
     setTableOpacity(0);
     try {
       const [resMiembros, resRamas, resApoderados] = await Promise.all([
-        fetch('http://localhost:8080/api/miembros'),
-        fetch('http://localhost:8080/api/ramas'),
-        fetch('http://localhost:8080/api/apoderados')
+        authFetch('http://localhost:8080/api/miembros'),
+        authFetch('http://localhost:8080/api/ramas'),
+        authFetch('http://localhost:8080/api/apoderados')
       ]);
       setMiembros(await resMiembros.json());
       setRamas(await resRamas.json());
@@ -200,7 +201,7 @@ function Miembros() {
                 // url = `.../${newApoderado.id}`; // Descomentar si usas PUT
                 method = 'POST'; // Usamos POST/Save
             }
-            const resApoderado = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newApoderado) });
+            const resApoderado = await authFetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newApoderado) });
             if (!resApoderado.ok) throw new Error("Error al guardar apoderado");
             const apoderadoGuardado = await resApoderado.json();
             finalApoderadoId = apoderadoGuardado.id;
@@ -218,18 +219,18 @@ function Miembros() {
         };
         if (isEditing) payload.id = formData.id;
         
-        await fetch('http://localhost:8080/api/miembros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        await authFetch('http://localhost:8080/api/miembros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         
         handleCloseModal(); // Cierre suave
         setTimeout(() => { // Esperamos a que cierre para recargar y alertar
-            fetchData();
+            authFetchData();
             alert(isEditing ? "Datos guardados correctamente" : "Miembro creado con éxito");
         }, 300);
 
     } catch (error) { console.error("Error al guardar:", error); alert("Hubo un error al guardar."); }
   };
 
-  const handleDelete = async (id) => { if (window.confirm("¿Estás seguro de eliminar este miembro?")) { try { await fetch(`http://localhost:8080/api/miembros/${id}`, { method: 'DELETE' }); fetchData(); } catch (error) { console.error(error); } } };
+  const handleDelete = async (id) => { if (window.confirm("¿Estás seguro de eliminar este miembro?")) { try { await fetch(`http://localhost:8080/api/miembros/${id}`, { method: 'DELETE' }); authFetchData(); } catch (error) { console.error(error); } } };
   const calcularEdad = (fecha) => { if (!fecha) return 0; const hoy = new Date(); const nacimiento = new Date(fecha); let edad = hoy.getFullYear() - nacimiento.getFullYear(); const m = hoy.getMonth() - nacimiento.getMonth(); if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) { edad--; } return edad; };
   const requestSort = (key) => { setTableOpacity(0); setTimeout(() => { let direction = 'asc'; if (sortConfig.key === key && sortConfig.direction === 'asc') { direction = 'desc'; } setSortConfig({ key, direction }); setTableOpacity(1); }, 300); };
 

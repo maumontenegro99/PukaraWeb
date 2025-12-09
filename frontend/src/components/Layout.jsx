@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import UserWidget from './UserWidget'; // <--- 1. Importamos el Widget
 import miFondoLocal from '../assets/fondo-scout.jpg'; 
 import insignia from '../assets/insignia.png';
 import iconFacebook from '../assets/icon-facebook.png'; 
@@ -115,15 +116,15 @@ function Layout({ children }) {
                 ...linkStyle, 
                 fontWeight: 'bold', 
                 fontSize: '1.2rem',
-                display: 'flex',        // <--- Alineación Flex
-                alignItems: 'center',   // <--- Centrado vertical
-                gap: '10px'             // <--- Espacio entre insignia y texto
+                display: 'flex',        
+                alignItems: 'center',   
+                gap: '10px'             
             }} 
             onClick={() => handleNavigation('/')}
         >
-          {/* 2. AGREGAMOS LA IMAGEN AQUÍ */}
-          PUKARA WECHE
+          {/* Orden: Insignia primero, luego Texto */}
           <img src={insignia} alt="Logo" style={{ height: '40px', width: 'auto' }} />
+          PUKARA WECHE
         </div>
 
         <button style={hamburgerButtonStyle} onClick={() => setMenuOpen(!menuOpen)}>
@@ -143,6 +144,9 @@ function Layout({ children }) {
       <main style={mainContentContainer}>
         {children}
       </main>
+
+      {/* 2. AQUÍ INSERTAMOS EL WIDGET DE USUARIO */}
+      <UserWidget />
 
       {/* FOOTER */}
       <footer style={footerStyle}>
