@@ -7,7 +7,7 @@
 
 Este proyecto nace desde el corazón y la gratitud hacia mi querido **Grupo Scout Pukara Weche**. La misión es simple pero poderosa: poner la tecnología al servicio del escultismo. 
 
-Mi intención es facilitar las tareas administrativas y logísticas que, aunque necesarias, muchas veces consumen el tiempo valioso de nuestros dirigentes. Al digitalizar y organizar la gestión del grupo, buscamos que el equipo pueda enfocar sus energías en lo que realmente importa: educar, jugar, compartir y construir un mundo mejor junto a los niños y jóvenes. Es mi forma de decir "Servir" y dejar nuestro grupo un poco mejor de lo que lo encontramos.
+Mi intención es facilitar las tareas administrativas y logísticas que, aunque necesarias, muchas veces consumen el tiempo valioso de nuestros dirigentes. Al digitalizar y organizar la gestión del grupo, buscamos que el equipo pueda enfocar sus energías en lo que realmente importa: educar, jugar, compartir y construir un mundo mejor junto a los niños y jóvenes. Es mi forma de "Servir" y dejar nuestro grupo un poco mejor de lo que lo encontramos.
 
 ---
 
