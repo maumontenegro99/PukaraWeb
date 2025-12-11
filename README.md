@@ -1,4 +1,4 @@
-# ⚜️ PukaraWeb (v0.0.1)
+# ⚜️ PukaraWeb (v0.1.0)
 
 ![Estado del Proyecto](https://img.shields.io/badge/Estado-En_Desarrollo-blue)
 ![Scout](https://img.shields.io/badge/Siempre-Listos-purple)
