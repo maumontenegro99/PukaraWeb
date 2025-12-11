@@ -39,7 +39,7 @@ Este proyecto está construido utilizando una arquitectura moderna de **Monorepo
 ---
 
 ## 🛠️ Requisitos
-
+ * **Visual Studio Code:** Para una mejor optimización te recomendamos usar VSCode.
  * **JDK 17:** Este programa usa el lenguaje Java.
  * **MYSQL 8.x:** Este programa trabaja con MYSQL 8.0 para la persistencia de datos.
  * **Node.js:** Al usar React + Vite, necesitas tener instalado node.js para poder ejecutarlo.
