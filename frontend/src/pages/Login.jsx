@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import miFondoLocal from '../assets/fondo-scout.jpg'; 
@@ -8,24 +8,34 @@ function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  
+  // 1. DETECTOR DE MÓVIL
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // LISTENER PARA RESPONSIVIDAD
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(''); // Limpiar errores previos
+    setError(''); 
     
     const result = await login(username, password);
     
     if (result.success) {
-        // Redirigir al Home con suavidad
         navigate('/');
     } else {
         setError(result.message);
     }
   };
 
-  // --- ESTILOS PURIFICADOS ---
+  // --- ESTILOS PURIFICADOS Y RESPONSIVOS ---
   const pageBackgroundStyle = {
     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1,
     backgroundImage: `url(${miFondoLocal})`,
@@ -34,19 +44,24 @@ function Login() {
   };
 
   const containerStyle = {
-    height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center',
-    fontFamily: "'Montserrat', sans-serif"
+    height: '100vh', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    fontFamily: "'Montserrat', sans-serif",
+    padding: '20px' // Margen de seguridad en móviles
   };
 
   const cardStyle = {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: '40px 50px',
+    // Padding adaptable: Menos en móvil para aprovechar espacio
+    padding: isMobile ? '30px 20px' : '40px 50px', 
     borderRadius: '20px',
     boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
     textAlign: 'center',
     width: '100%',
-    maxWidth: '400px',
-    animation: 'fadeInUp 0.5s ease-out' // Animación de entrada
+    maxWidth: '400px', // Límite en PC
+    animation: 'fadeInUp 0.5s ease-out' 
   };
 
   const inputStyle = {
@@ -68,9 +83,15 @@ function Login() {
       <div style={containerStyle}>
         
         <div style={cardStyle}>
-            <img src={insignia} alt="Logo" style={{width: '80px', marginBottom: '20px'}} />
-            <h2 style={{color: '#222', margin: '0 0 5px 0'}}>PUKARA WECHE</h2>
-            <p style={{color: '#666', fontSize:'0.9rem', marginBottom: '30px'}}>Plataforma de Gestión</p>
+            {/* Logo un poco más chico en móvil */}
+            <img src={insignia} alt="Logo" style={{width: isMobile ? '60px' : '80px', marginBottom: '20px'}} />
+            
+            <h2 style={{color: '#222', margin: '0 0 5px 0', fontSize: isMobile ? '1.5rem' : '1.8rem'}}>
+                PUKARA WECHE
+            </h2>
+            <p style={{color: '#666', fontSize:'0.9rem', marginBottom: '30px'}}>
+                Plataforma de Gestión
+            </p>
 
             <form onSubmit={handleLogin}>
                 <div style={{textAlign:'left'}}>
@@ -115,7 +136,6 @@ function Login() {
         </div>
 
       </div>
-      {/* Definición de la animación CSS en línea para no crear archivo CSS aparte */}
       <style>{`
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }

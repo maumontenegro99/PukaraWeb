@@ -1,13 +1,18 @@
 package com.pukaraweb.PukaraWeb.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated; // Importante para la lista de ramas
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -26,22 +31,31 @@ public class Evento {
     private Long id;
 
     @Column(nullable = false)
-    private String titulo; // Ej: "Campamento de Invierno", "Reunión Sábado"
+    private String titulo;
 
-    @Column(nullable = false)
-    private LocalDateTime fechaInicio; // Usa LocalDateTime para tener Hora también
+    // Asegúrate de que TipoEvento.java existe en el mismo paquete 'model'
+    @Enumerated(EnumType.STRING)
+    private TipoEvento tipo;
 
-    @Column(nullable = false)
+    private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
 
-    private String lugar; // Ej: "Parque Mahuida", "Sede Local"
+    // CAMBIO IMPORTANTE: Ahora pueden ser VARIAS ramas
+    // Usamos @ManyToMany para que un evento pueda tener muchas ramas
+    @ManyToMany
+    @JoinTable(
+        name = "evento_ramas", // Nombre de la tabla intermedia
+        joinColumns = @JoinColumn(name = "evento_id"),
+        inverseJoinColumns = @JoinColumn(name = "rama_id")
+    )
+    private List<Rama> ramas; // Lista de ramas participantes
 
-    private Double costo; // Ej: 15000.0 (Si es gratis, va 0)
-
-    private String tipo; // Ej: "CAMPAMENTO", "REUNION", "SALIDA"
-
-    // RELACIÓN: ¿Quién organiza?
     @ManyToOne
-    @JoinColumn(name = "rama_id")
-    private Rama rama;
+    @JoinColumn(name = "ubicacion_evento_id")
+    private UbicacionEvento ubicacion;
+
+    @Column(length = 1000)
+    private String descripcion;
+    
+    private Integer costo;
 }

@@ -136,7 +136,7 @@ function Layout({ children }) {
           <a style={linkStyle} onClick={() => handleNavigation('/miembros')}>Miembros</a>
           <a style={linkStyle} onClick={() => handleNavigation('/inventario')}>Inventario</a>
           <a style={linkStyle} onClick={() => handleNavigation('/eventos')}>Eventos</a>
-          <a style={linkStyle} onClick={() => handleNavigation('/adultos')}>Equipo</a>
+          <a style={linkStyle} onClick={() => handleNavigation('/equipo')}>Equipo</a>
         </div>
       </nav>
 

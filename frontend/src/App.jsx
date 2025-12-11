@@ -8,6 +8,8 @@ import Ramas from './pages/Ramas';
 import Miembros from './pages/Miembros';
 import Login from './pages/Login';
 import Inventario from './pages/Inventario';
+import Eventos from './pages/Eventos'; 
+import Equipo from './pages/Equipo';
 
 // COMPONENTE PROTECTOR MEJORADO
 const PrivateRoute = ({ children }) => {
@@ -43,6 +45,8 @@ function App() {
           <Route path="/ramas" element={<PrivateRoute><Layout><Ramas /></Layout></PrivateRoute>} />
           <Route path="/miembros" element={<PrivateRoute><Layout><Miembros /></Layout></PrivateRoute>} />
           <Route path="/inventario" element={<PrivateRoute><Layout><Inventario /></Layout></PrivateRoute>} />
+          <Route path="/eventos" element={<PrivateRoute><Layout><Eventos /></Layout></PrivateRoute>} />
+          <Route path="/equipo" element={<PrivateRoute><Layout><Equipo /></Layout></PrivateRoute>} />
           
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

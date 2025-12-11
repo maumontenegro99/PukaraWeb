@@ -3,6 +3,7 @@ package com.pukaraweb.PukaraWeb.model; // <--- Fíjate que ahora apunta a tu car
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -41,4 +42,8 @@ public class Rama {
     @OneToMany(mappedBy = "rama", cascade = CascadeType.ALL)
     @JsonIgnore 
     private List<Miembro> miembros;
+
+    @OneToMany(mappedBy = "rama")
+    @JsonIgnoreProperties("rama") // Evita bucle infinito
+    private java.util.List<Dirigente> equipo;
 }
