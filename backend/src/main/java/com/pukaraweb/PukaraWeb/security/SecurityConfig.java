@@ -3,6 +3,7 @@ package com.pukaraweb.PukaraWeb.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // IMPORTANTE: Agregado para usar GET
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -30,15 +31,25 @@ public class SecurityConfig {
         http
             // 1. Deshabilitar CSRF (No necesario para APIs REST con Token)
             .csrf(csrf -> csrf.disable())
+            
             // 2. Activar CORS (Para permitir conexión desde React localhost:5173)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // 3. Configurar Rutas
+            
+            // 3. Configurar Rutas (El Semáforo de seguridad)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // ¡Login es público! Si no, nadie entra.
-                .anyRequest().authenticated() // Todo lo demás requiere Token
+                // ✅ ZONA PÚBLICA: Login y Registro
+                .requestMatchers("/api/auth/**").permitAll()
+
+                // ✅ ZONA PÚBLICA: Cualquiera puede LEER noticias (GET) sin token
+                .requestMatchers(HttpMethod.GET, "/api/noticias/**").permitAll()
+
+                // 🔒 ZONA PRIVADA: Todo lo demás requiere Token (Crear noticias, inventario, miembros, etc.)
+                .anyRequest().authenticated()
             )
-            // 4. No usar sesiones (Spring Security por defecto usa cookies, aquí lo forzamos a ser Stateless)
+            
+            // 4. No usar sesiones (Stateless)
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
             // 5. Agregar nuestro filtro JWT antes del filtro de usuario/clave estándar
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -53,6 +64,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

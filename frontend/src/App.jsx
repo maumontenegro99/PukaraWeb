@@ -10,13 +10,14 @@ import Login from './pages/Login';
 import Inventario from './pages/Inventario';
 import Eventos from './pages/Eventos'; 
 import Equipo from './pages/Equipo';
+import CrearNoticia from './components/CrearNoticia';
+import ListadoNoticias from './pages/ListadoNoticias';
 
 // COMPONENTE PROTECTOR MEJORADO
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
-  // 1. Si estamos cargando (verificando token), mostramos un spinner o nada
-  // Esto evita el "flicker" o parpadeo hacia el login
+  // 1. Si estamos cargando (verificando token), mostramos un mensaje de espera
   if (loading) {
     return (
         <div style={{
@@ -28,8 +29,8 @@ const PrivateRoute = ({ children }) => {
     ); 
   }
 
-  // 2. Si terminó de cargar y NO está autenticado -> Login
-  // 3. Si terminó de cargar y SÍ está autenticado -> Muestra la página (children)
+  // 2. Si terminó de cargar y NO está autenticado -> Redirige al Login
+  // 3. Si terminó de cargar y SÍ está autenticado -> Concede acceso
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
@@ -38,16 +39,25 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
+          {/* Ruta Pública Independiente */}
           <Route path="/login" element={<Login />} />
 
-          {/* Rutas Protegidas */}
+          {/* Rutas Privadas / Estructura del Panel de Gestión */}
           <Route path="/" element={<PrivateRoute><Layout><Home /></Layout></PrivateRoute>} />
+          
+          {/* Nueva Vista de Noticias con la misma estructura en la barra superior */}
+          <Route path="/noticias" element={<PrivateRoute><Layout><ListadoNoticias /></Layout></PrivateRoute>} />
+          
           <Route path="/ramas" element={<PrivateRoute><Layout><Ramas /></Layout></PrivateRoute>} />
           <Route path="/miembros" element={<PrivateRoute><Layout><Miembros /></Layout></PrivateRoute>} />
           <Route path="/inventario" element={<PrivateRoute><Layout><Inventario /></Layout></PrivateRoute>} />
           <Route path="/eventos" element={<PrivateRoute><Layout><Eventos /></Layout></PrivateRoute>} />
           <Route path="/equipo" element={<PrivateRoute><Layout><Equipo /></Layout></PrivateRoute>} />
           
+          {/* Formulario de Redacción */}
+          <Route path="/crear-noticia" element={<PrivateRoute><Layout><CrearNoticia /></Layout></PrivateRoute>} />
+          
+          {/* Redirección Automática por Defecto */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>

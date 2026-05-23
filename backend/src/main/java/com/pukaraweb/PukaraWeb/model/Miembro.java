@@ -1,4 +1,4 @@
-package com.pukaraweb.PukaraWeb.model; // <--- Aquí también ajustado a model
+package com.pukaraweb.PukaraWeb.model;
 
 import java.time.LocalDate;
 

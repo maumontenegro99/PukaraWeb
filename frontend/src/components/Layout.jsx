@@ -132,6 +132,8 @@ function Layout({ children }) {
         </button>
 
         <div style={navLinksContainerStyle}>
+          {/* NUEVA PESTAÑA DE NOTICIAS */}
+          <a style={linkStyle} onClick={() => handleNavigation('/noticias')}>Noticias</a>
           <a style={linkStyle} onClick={() => handleNavigation('/ramas')}>Ramas</a>
           <a style={linkStyle} onClick={() => handleNavigation('/miembros')}>Miembros</a>
           <a style={linkStyle} onClick={() => handleNavigation('/inventario')}>Inventario</a>

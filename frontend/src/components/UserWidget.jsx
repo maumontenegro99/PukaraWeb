@@ -39,9 +39,8 @@ function UserWidget() {
       logout();
   };
 
-  // --- LÓGICA DE HOVER "PURIFICADA" (SOLUCIÓN AL PROBLEMA) ---
+  // --- LÓGICA DE HOVER "PURIFICADA" ---
   const handleMouseEnter = () => {
-      // Si había una orden de cerrar, la cancelamos porque el mouse volvió
       if (hoverTimeout.current) {
           clearTimeout(hoverTimeout.current);
       }
@@ -49,7 +48,6 @@ function UserWidget() {
   };
 
   const handleMouseLeave = () => {
-      // No cerramos de inmediato. Esperamos 300ms por si el usuario solo está moviendo el mouse al menú
       hoverTimeout.current = setTimeout(() => {
           setIsHovered(false);
       }, 300);
@@ -87,16 +85,15 @@ function UserWidget() {
       }
   };
 
-  // --- ESTILOS ---
+  // --- ESTILOS PURIFICADOS (MOVIDOS A LA IZQUIERDA) ---
   const widgetContainerStyle = {
       position: 'fixed',
       bottom: '30px',
-      right: '30px',
+      left: '30px', // <-- Cambiado de right a left
       zIndex: 2000,
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'flex-end',
-      // Importante: Quitamos pointerEvents 'none' si lo hubiera, para asegurar captura del mouse
+      alignItems: 'flex-start', // <-- Cambiado para alinear el menú a la izquierda
   };
 
   const avatarBtnStyle = {
@@ -112,19 +109,16 @@ function UserWidget() {
 
   const menuStyle = {
       position: 'absolute',
-      // ACERCAMOS UN POCO EL MENÚ (Antes 70px, ahora 65px) para reducir la brecha visual
       bottom: '65px', 
-      right: '0',
+      left: '0', // <-- Cambiado de right a left
       backgroundColor: 'white',
       padding: '15px',
       borderRadius: '15px',
       boxShadow: '0 5px 20px rgba(0,0,0,0.15)',
       width: '200px',
-      transformOrigin: 'bottom right',
-      // Animación suave de entrada/salida
+      transformOrigin: 'bottom left', // <-- Cambiado para que la animación salga desde la izquierda
       transform: isHovered ? 'scale(1) translateY(0)' : 'scale(0.8) translateY(20px)',
       opacity: isHovered ? 1 : 0,
-      // Esto permite hacer clic aunque se esté desvaneciendo (opcional, pero útil)
       pointerEvents: isHovered ? 'auto' : 'none', 
       transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
   };
@@ -144,7 +138,6 @@ function UserWidget() {
     <>
       <div 
         style={widgetContainerStyle}
-        // APLICAMOS LA NUEVA LÓGICA DE EVENTOS AQUÍ
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
