@@ -11,8 +11,9 @@ export const authFetch = async (url, options = {}) => {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Si no se especificó tipo de contenido, asumimos JSON (útil para POST/PUT)
-    if (!headers['Content-Type']) {
+    // Si no se especificó tipo de contenido, asumimos JSON (útil para POST/PUT).
+    // Con FormData (subida de archivos) el navegador pone el Content-Type con su boundary.
+    if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
     }
 

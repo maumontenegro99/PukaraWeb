@@ -1,23 +1,292 @@
-/* src/index.css */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/archivo/wdth.css";
 
-/* 1. Reseteo básico: Quitamos los márgenes feos del navegador */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f4f6f8; /* Un gris muy suave, típico de dashboards */
-  color: #333;
-  
-  /* 2. Truco para centrar todo vertical y horizontalmente en la pantalla */
-  display: flex;
-  justify-content: center; /* Centrado horizontal */
-  min-height: 100vh; /* Que ocupe el 100% de la altura de la ventana */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Archivo Variable', system-ui, sans-serif;
+    --color-celeste-ink: var(--celeste-ink);
+    --color-grafito: var(--grafito);
+    --color-contraste: var(--contraste);
+    --color-rama-manada: #f5d90a;
+    --color-rama-bandada: #1b2a7c;
+    --color-rama-tropa: #009245;
+    --color-rama-compania: #66ccbe;
+    --color-rama-avanzada: #5d448b;
+    --color-rama-clan: #ed1c24;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* 3. El contenedor principal de React */
-#root {
-  width: 100%;
-  max-width: 1200px; /* Que no se estire infinito en pantallas gigantes */
-  padding: 20px;
-  text-align: center; /* Alineamos texto al centro por defecto */
+:root {
+    /* Grupo Scout Pukara Weche: celeste del pañolín, grafito de la insignia, gris de los banderines */
+    --celeste: #16afd6;
+    --celeste-ink: #0b6784;
+    --grafito: #1d2429;
+    --contraste: #1d2429;
+    --background: #f5f8f9;
+    --foreground: #1d2429;
+    --card: #ffffff;
+    --card-foreground: #1d2429;
+    --popover: #ffffff;
+    --popover-foreground: #1d2429;
+    --primary: #16afd6;
+    --primary-foreground: #0c1a20;
+    --secondary: #e3eaee;
+    --secondary-foreground: #1d2429;
+    --muted: #edf2f4;
+    --muted-foreground: #56626c;
+    --accent: #dcf1f8;
+    --accent-foreground: #0b4f63;
+    --destructive: #c62828;
+    --border: #d6dfe4;
+    --input: #cbd5db;
+    --ring: #16afd6;
+    --chart-1: #16afd6;
+    --chart-2: #0b6784;
+    --chart-3: #8a959e;
+    --chart-4: #1d2429;
+    --chart-5: #009245;
+    --radius: 0.5rem;
+    --sidebar: #1d2429;
+    --sidebar-foreground: #dfe7eb;
+    --sidebar-primary: #16afd6;
+    --sidebar-primary-foreground: #0c1a20;
+    --sidebar-accent: #2a333a;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #313b43;
+    --sidebar-ring: #16afd6;
+}
+
+.dark {
+    /* Modo oscuro: fondo grafito profundo, el celeste del pañolín como acento y un celeste más claro para texto */
+    color-scheme: dark;
+    --celeste: #16afd6;
+    --celeste-ink: #6fd0ec;
+    --grafito: #1d2429;
+    --contraste: #dfe7eb;
+    --background: #0f1417;
+    --foreground: #e3eaee;
+    --card: #161d21;
+    --card-foreground: #e3eaee;
+    --popover: #182025;
+    --popover-foreground: #e3eaee;
+    --primary: #16afd6;
+    --primary-foreground: #0c1a20;
+    --secondary: #232c32;
+    --secondary-foreground: #e3eaee;
+    --muted: #1d252a;
+    --muted-foreground: #9aa8b1;
+    --accent: #133744;
+    --accent-foreground: #bdeaf7;
+    --destructive: #f0645f;
+    --border: #2a353c;
+    --input: #36434b;
+    --ring: #16afd6;
+    --chart-1: #16afd6;
+    --chart-2: #6fd0ec;
+    --chart-3: #8a959e;
+    --chart-4: #dfe7eb;
+    --chart-5: #2fbf71;
+    --sidebar: #131a1e;
+    --sidebar-foreground: #dfe7eb;
+    --sidebar-primary: #16afd6;
+    --sidebar-primary-foreground: #0c1a20;
+    --sidebar-accent: #222b31;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #262f35;
+    --sidebar-ring: #16afd6;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+
+/* Titulares: Archivo condensado y pesado, como la rotulación de la insignia */
+@utility font-display {
+  font-family: var(--font-sans);
+  font-stretch: 72%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+
+@keyframes banderin-cae {
+  from { transform: translateY(-110%) rotate(-8deg); }
+  to { transform: translateY(0) rotate(0); }
+}
+
+@utility animate-banderin {
+  animation: banderin-cae 600ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  transform-origin: top center;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Contenido HTML de noticias (editor Quill) */
+@utility prose-noticia {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  & p { margin-block: 0 1em; }
+  & h1, & h2 { font-weight: 700; font-size: 1.35em; line-height: 1.25; margin-block: 1.4em 0.5em; }
+  & ul { list-style: disc; padding-left: 1.4em; margin-block: 0 1em; }
+  & ol { list-style: decimal; padding-left: 1.4em; margin-block: 0 1em; }
+  & a { color: var(--celeste-ink); text-decoration: underline; text-underline-offset: 3px; }
+}
+/* Fondo facetado del hero: deriva lenta de la foto, reflejo que barre el vidrio y grano de película */
+@keyframes fondo-deriva {
+  from { transform: scale(1.12) translate3d(0, 0, 0); }
+  to { transform: scale(1.2) translate3d(-2.5%, -1.5%, 0); }
+}
+
+@keyframes fondo-reflejo {
+  0%, 100% { background-position: 120% 0; }
+  50% { background-position: -20% 0; }
+}
+
+@keyframes fondo-grano {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6%, 4%); }
+  40% { transform: translate(5%, -7%); }
+  60% { transform: translate(-3%, 8%); }
+  80% { transform: translate(7%, 2%); }
+  100% { transform: translate(0, 0); }
+}
+
+@utility fondo-deriva {
+  filter: saturate(1.2) brightness(0.92);
+  animation: fondo-deriva 26s ease-in-out infinite alternate;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    transform: scale(1.12);
+  }
+}
+
+@utility fondo-reflejo {
+  background-image: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.55) 48%, rgb(22 175 214 / 0.35) 52%, transparent 65%);
+  background-size: 250% 100%;
+  animation: fondo-reflejo 14s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-position: 30% 0;
+  }
+}
+
+@utility fondo-grano {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  animation: fondo-grano 0.9s steps(5) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+
+/* Editor de noticias (Quill) en modo oscuro */
+.dark .ql-snow .ql-stroke {
+  stroke: currentColor;
+}
+.dark .ql-snow .ql-fill {
+  fill: currentColor;
+}
+.dark .ql-snow .ql-picker,
+.dark .ql-snow .ql-picker-options,
+.dark .ql-toolbar.ql-snow {
+  color: var(--foreground);
+}
+.dark .ql-snow .ql-picker-options {
+  background-color: var(--popover);
+}
+.dark .ql-editor.ql-blank::before {
+  color: var(--muted-foreground);
+}
+
+/* Aparición suave: al cambiar de vista y cuando termina de cargar el contenido */
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-aparecer {
+  animation: aparecer 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Tablas, tarjetas, avisos y estados vacíos aparecen con la misma transición al terminar de cargar */
+@layer components {
+  [data-slot='table-container'],
+  [data-slot='card'],
+  [data-slot='empty'],
+  [data-slot='alert'] {
+    animation: aparecer 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot='table-container'],
+    [data-slot='card'],
+    [data-slot='empty'],
+    [data-slot='alert'] {
+      animation: none;
+    }
+  }
+}
+
+/* Cambio de tema sin saltos: los colores de fondo y borde se funden en vez de cambiar de golpe */
+html.cambiando-tema,
+html.cambiando-tema * {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease !important;
 }

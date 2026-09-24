@@ -1,13 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pukara-frontend</title>
+    <meta name="description" content="Grupo Guía y Scout Pukara Weche: noticias, biblioteca y panel del grupo." />
+    <title>Pukara Weche</title>
+    <script>
+      // Aplica el tema guardado antes de pintar la página, para evitar un destello claro al cargar en modo oscuro.
+      try {
+        var tema = localStorage.getItem('tema') || 'sistema';
+        var oscuro = tema === 'oscuro' || (tema === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (oscuro) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

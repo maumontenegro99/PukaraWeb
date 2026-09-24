@@ -1,250 +1,419 @@
-import React, { useState, useEffect } from 'react';
-import { authFetch } from '../helpers/authFetch';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { CircleAlertIcon, CircleCheckIcon, FolderOpenIcon, LoaderCircleIcon, PencilIcon, PlusIcon, SearchIcon, ServerCrashIcon, Trash2Icon, UserCogIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
-const ramaColors = {
-  MANADA: '#fced21',
-  BANDADA: '#1b2a7c',
-  TROPA: '#009245',
-  COMPANIA: '#66ccbe',
-  AVANZADA: '#5d448b',
-  CLAN: '#ED1C24'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ConfirmarEliminar } from '@/components/admin/ConfirmarEliminar';
+import { DocumentacionDirigente } from '@/components/admin/DocumentacionDirigente';
+import { Encabezado } from '@/components/admin/Encabezado';
+import { RamaBadge } from '@/components/admin/RamaBadge';
+import { DOCUMENTOS, faltantes } from '@/lib/documentacion';
+import { api, incluye, useDatosPanel } from '@/lib/panel';
+
+const SIN_RAMA = 'SIN_RAMA';
+const TODAS = 'TODAS';
+const VACIO = {
+  id: null, nombres: '', apellidos: '', email: '', telefono: '', cargo: '', fechaNacimiento: '', ramaId: SIN_RAMA,
+  ...Object.fromEntries(DOCUMENTOS.map((d) => [d.campo, false])),
 };
 
-const ramaTextColors = {
-  BANDADA: '#fff',
-  AVANZADA: '#fff',
-  default: '#222'
-};
+function EstadoDocumentos({ dirigente, onAbrir }) {
+  const faltan = faltantes(dirigente);
+  if (faltan.length === 0) {
+    return (
+      <Badge asChild variant="secondary" className="cursor-pointer gap-1">
+        <button type="button" onClick={onAbrir}>
+          <CircleCheckIcon />
+          Completa
+        </button>
+      </Badge>
+    );
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge asChild variant="outline" className="cursor-pointer gap-1 border-destructive/40 text-destructive">
+          <button type="button" onClick={onAbrir}>
+            <CircleAlertIcon />
+            Faltan {faltan.length} de {DOCUMENTOS.length}
+          </button>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        <ul>
+          {faltan.map((d) => (
+            <li key={d.campo}>{d.etiqueta}</li>
+          ))}
+        </ul>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
-function Equipo() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [dirigentes, setDirigentes] = useState([]);
-  const [ramas, setRamas] = useState([]);
+function FormularioDirigente({ abierto, onCambio, dirigente, ramas, onGuardado }) {
+  const [form, setForm] = useState(VACIO);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
 
-  // Estados UI
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [tableOpacity, setTableOpacity] = useState(0);
+  useEffect(() => {
+    if (!abierto) return;
+    setError('');
+    setForm(
+      dirigente
+        ? {
+            ...VACIO,
+            ...Object.fromEntries(Object.keys(VACIO).map((k) => [k, dirigente[k] ?? VACIO[k]])),
+            ramaId: dirigente.rama ? String(dirigente.rama.id) : SIN_RAMA,
+          }
+        : VACIO
+    );
+  }, [abierto, dirigente]);
 
-  const [formData, setFormData] = useState({
-    id: null, nombres: '', apellidos: '', email: '', telefono: '', cargo: '', 
-    fechaNacimiento: '', ramaId: '',
-    docAntecedentes: false, docInhabilidad: false, 
-    docCurriculum: false, docCurriculumScout: false, docNacimiento: false
+  const campo = (nombre) => ({
+    id: `dirigente-${nombre}`,
+    value: form[nombre],
+    onChange: (e) => setForm((f) => ({ ...f, [nombre]: e.target.value })),
   });
 
-  // --- EFECTOS ---
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    setTableOpacity(0);
-    const handler = setTimeout(() => { setDebouncedFilter(searchTerm); setTableOpacity(1); }, 300);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setTableOpacity(0);
-    try {
-      const [resDir, resRam] = await Promise.all([
-        authFetch('http://localhost:8080/api/dirigentes'),
-        authFetch('http://localhost:8080/api/ramas')
-      ]);
-      if (resDir.ok) setDirigentes(await resDir.json());
-      if (resRam.ok) setRamas(await resRam.json());
-      setTimeout(() => setTableOpacity(1), 100);
-    } catch (error) { console.error("Error cargando equipo:", error); }
-  };
-
-  // --- HANDLERS ---
-  const handleOpenModal = (dir = null) => {
-    if (dir) {
-      setIsEditing(true);
-      setFormData({
-        id: dir.id, nombres: dir.nombres, apellidos: dir.apellidos,
-        email: dir.email || '', telefono: dir.telefono || '', cargo: dir.cargo || '',
-        fechaNacimiento: dir.fechaNacimiento || '',
-        ramaId: dir.rama ? dir.rama.id : '',
-        docAntecedentes: dir.docAntecedentes, docInhabilidad: dir.docInhabilidad,
-        docCurriculum: dir.docCurriculum, docCurriculumScout: dir.docCurriculumScout, docNacimiento: dir.docNacimiento
-      });
-    } else {
-      setIsEditing(false);
-      setFormData({
-        id: null, nombres: '', apellidos: '', email: '', telefono: '', cargo: '', 
-        fechaNacimiento: '', ramaId: '',
-        docAntecedentes: false, docInhabilidad: false, docCurriculum: false, docCurriculumScout: false, docNacimiento: false
-      });
-    }
-    setShowModal(true);
-    setTimeout(() => setModalVisible(true), 10);
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setTimeout(() => setShowModal(false), 300);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
-  };
-
-  const handleSubmit = async (e) => {
+  const guardar = async (e) => {
     e.preventDefault();
-    const payload = {
-        ...formData,
-        rama: formData.ramaId ? { id: formData.ramaId } : null
-    };
+    setGuardando(true);
+    setError('');
+    const { ramaId, ...datos } = form;
     try {
-        await authFetch('http://localhost:8080/api/dirigentes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        handleCloseModal();
-        setTimeout(() => { fetchData(); alert(isEditing ? "Dirigente actualizado" : "Dirigente creado"); }, 300);
-    } catch (error) { console.error(error); alert("Error al guardar"); }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Eliminar a este dirigente del equipo?")) {
-        try { await authFetch(`http://localhost:8080/api/dirigentes/${id}`, { method: 'DELETE' }); fetchData(); } 
-        catch (error) { console.error(error); }
+      await api('/api/dirigentes', {
+        method: 'POST',
+        body: {
+          ...datos,
+          id: form.id ?? undefined,
+          fechaNacimiento: form.fechaNacimiento || null,
+          rama: ramaId === SIN_RAMA ? null : { id: Number(ramaId) },
+        },
+      });
+      toast.success(form.id ? 'Cambios guardados' : `${form.nombres} se sumó al equipo`);
+      onGuardado();
+      onCambio(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
     }
   };
-
-  // --- FILTRADO ---
-  const dirigentesFiltrados = dirigentes.filter(d => 
-    d.nombres.toLowerCase().includes(debouncedFilter.toLowerCase()) || 
-    d.apellidos.toLowerCase().includes(debouncedFilter.toLowerCase()) ||
-    (d.rama && d.rama.nombre.toLowerCase().includes(debouncedFilter.toLowerCase()))
-  );
-
-  // --- RENDERIZADO DE CHECKLIST ---
-  const DocCheck = ({ label, checked }) => (
-      <div style={{display:'flex', alignItems:'center', gap:'5px', fontSize:'0.8rem', color: checked ? '#009245' : '#ccc', marginBottom:'3px'}}>
-          <span>{checked ? '✅' : '⬜'}</span> {label}
-      </div>
-  );
-
-  // --- ESTILOS RESPONSIVOS ---
-  const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Montserrat', sans-serif" };
-  const headerCardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #eee', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '15px' : '0' };
-  const titleStyle = { color: '#00B4D8', margin: 0, textTransform: 'uppercase', fontSize: isMobile ? '1.5rem' : '1.8rem', textAlign: isMobile ? 'center' : 'left' };
-  const controlsContainerStyle = { display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: isMobile ? '10px' : '0', width: isMobile ? '100%' : 'auto' };
-  const searchInputStyle = { padding: '12px 15px', borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : '300px', marginRight: isMobile ? '0' : '15px', fontSize: '0.95rem', outline: 'none', transition: 'border 0.2s', boxSizing: 'border-box' };
-  const btnPrimaryStyle = { backgroundColor: '#00B4D8', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', boxShadow: '0 4px 10px rgba(0, 180, 216, 0.3)', width: isMobile ? '100%' : 'auto' };
-  
-  const gridStyle = { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', opacity: tableOpacity, transition: 'opacity 0.3s' };
-  const cardStyle = { backgroundColor: 'white', borderRadius: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #eee', overflow: 'hidden', transition: 'transform 0.2s', position: 'relative', display:'flex', flexDirection:'column' };
-  
-  const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(3px)', opacity: modalVisible ? 1 : 0, transition: 'opacity 0.3s ease-in-out' };
-  const modalContentStyle = { backgroundColor: 'white', padding: '40px', borderRadius: '20px', width: isMobile ? '90%' : '600px', maxHeight: '90vh', overflowY: 'auto', transform: modalVisible ? 'translateY(0) scale(1)' : 'translateY(-20px) scale(0.95)', opacity: modalVisible ? 1 : 0, transition: 'all 0.3s ease-in-out' };
 
   return (
-    <div style={containerStyle}>
-      <div style={headerCardStyle}>
-        <div><h1 style={titleStyle}>Equipo de Dirigentes</h1><p style={{color: '#888', margin: '5px 0 0 0', fontSize: '1rem', textAlign: isMobile ? 'center' : 'left'}}>Gestión de adultos y documentación</p></div>
-        <div style={controlsContainerStyle}>
-            <input type="text" placeholder="🔍 Buscar dirigente..." style={searchInputStyle} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <button style={btnPrimaryStyle} onClick={() => handleOpenModal()}>+ Nuevo Dirigente</button>
+    <Dialog open={abierto} onOpenChange={onCambio}>
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
+        <form onSubmit={guardar} className="flex flex-col gap-6">
+          <DialogHeader>
+            <DialogTitle>{form.id ? `Editar a ${dirigente?.nombres}` : 'Agregar dirigente'}</DialogTitle>
+            <DialogDescription>Marca lo que entregó en papel. Los archivos se suben desde Documentos.</DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="dirigente-nombres">Nombres</FieldLabel>
+                <Input {...campo('nombres')} required />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-apellidos">Apellidos</FieldLabel>
+                <Input {...campo('apellidos')} required />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-cargo">Cargo</FieldLabel>
+                <Input {...campo('cargo')} placeholder="Responsable de unidad" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-rama">Rama</FieldLabel>
+                <Select value={form.ramaId} onValueChange={(v) => setForm((f) => ({ ...f, ramaId: v }))}>
+                  <SelectTrigger id="dirigente-rama">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value={SIN_RAMA}>Sin rama (grupo)</SelectItem>
+                      {ramas.map((r) => (
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-email">Correo</FieldLabel>
+                <Input {...campo('email')} type="email" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-telefono">Teléfono</FieldLabel>
+                <Input {...campo('telefono')} type="tel" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="dirigente-fechaNacimiento">Fecha de nacimiento</FieldLabel>
+                <Input {...campo('fechaNacimiento')} type="date" />
+              </Field>
+            </div>
+            <FieldSet className="rounded-lg border bg-muted/40 p-4">
+              <FieldLegend>Documentación entregada</FieldLegend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {DOCUMENTOS.map((d) => (
+                  <div key={d.campo} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`doc-${d.campo}`}
+                      checked={!!form[d.campo]}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, [d.campo]: v === true }))}
+                    />
+                    <Label htmlFor={`doc-${d.campo}`} className="font-normal">
+                      {d.etiqueta}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </FieldSet>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={guardando || !form.nombres || !form.apellidos}>
+              {guardando && <LoaderCircleIcon data-icon="inline-start" className="animate-spin" />}
+              {form.id ? 'Guardar cambios' : 'Agregar al equipo'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Equipo() {
+  const location = useLocation();
+  const { dirigentes, ramas, estado, recargar } = useDatosPanel({ dirigentes: '/api/dirigentes', ramas: '/api/ramas' });
+  const [busqueda, setBusqueda] = useState('');
+  const [soloPendientes, setSoloPendientes] = useState(false);
+  // Si se llega desde Ramas ("Equipo de unidad"), parte filtrado por esa rama.
+  const [ramaFiltro, setRamaFiltro] = useState(() => (location.state?.ramaId ? String(location.state.ramaId) : TODAS));
+  // Se guarda el id y se lee de la lista recargada, para que el panel muestre siempre los datos al día.
+  const [documentosDe, setDocumentosDe] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const [aEliminar, setAEliminar] = useState(null);
+
+  const pendientes = dirigentes.filter((d) => faltantes(d).length > 0).length;
+
+  const visibles = useMemo(
+    () =>
+      dirigentes
+        .filter((d) => ramaFiltro === TODAS || (ramaFiltro === SIN_RAMA ? !d.rama : String(d.rama?.id) === ramaFiltro))
+        .filter((d) => !soloPendientes || faltantes(d).length > 0)
+        .filter((d) => !busqueda || incluye(`${d.nombres} ${d.apellidos} ${d.cargo ?? ''} ${d.rama?.nombre ?? ''}`, busqueda))
+        .sort((a, b) => `${a.apellidos} ${a.nombres}`.localeCompare(`${b.apellidos} ${b.nombres}`, 'es')),
+    [dirigentes, busqueda, soloPendientes, ramaFiltro]
+  );
+
+  const eliminar = async () => {
+    try {
+      await api(`/api/dirigentes/${aEliminar.id}`, { method: 'DELETE' });
+      toast.success(`${aEliminar.nombres} salió del equipo`);
+      recargar();
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setAEliminar(null);
+  };
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <Encabezado titulo="Dirigentes" descripcion="El equipo adulto del grupo y el estado de su documentación.">
+        <Button onClick={() => setEditando({})}>
+          <PlusIcon data-icon="inline-start" />
+          Agregar dirigente
+        </Button>
+      </Encabezado>
+
+      {estado === 'listo' && pendientes > 0 && (
+        <Alert>
+          <CircleAlertIcon />
+          <AlertTitle>
+            {pendientes === 1 ? '1 dirigente tiene documentación pendiente' : `${pendientes} dirigentes tienen documentación pendiente`}
+          </AlertTitle>
+          <AlertDescription>Los certificados de antecedentes e inhabilidades son obligatorios para trabajar con menores.</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, cargo o rama"
+            aria-label="Buscar dirigentes"
+            className="pl-9"
+          />
+        </div>
+        <Select value={ramaFiltro} onValueChange={setRamaFiltro}>
+          <SelectTrigger className="sm:w-48" aria-label="Filtrar por rama">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value={TODAS}>Todas las ramas</SelectItem>
+              {ramas.map((r) => (
+                <SelectItem key={r.id} value={String(r.id)}>
+                  {r.nombre}
+                </SelectItem>
+              ))}
+              <SelectItem value={SIN_RAMA}>Sin rama (grupo)</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Switch id="solo-pendientes" checked={soloPendientes} onCheckedChange={setSoloPendientes} />
+          <Label htmlFor="solo-pendientes">Solo con documentación pendiente</Label>
         </div>
       </div>
 
-      <div style={gridStyle}>
-          {dirigentesFiltrados.map(dir => (
-              <div key={dir.id} style={cardStyle} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                  {/* CABECERA TARJETA */}
-                  <div style={{padding: '20px', backgroundColor: '#f8f9fa', borderBottom: '1px solid #eee', display:'flex', alignItems:'center', gap:'15px'}}>
-                      <div style={{width:'50px', height:'50px', borderRadius:'50%', backgroundColor: dir.rama ? ramaColors[dir.rama.tipo] : '#ccc', display:'flex', justifyContent:'center', alignItems:'center', fontSize:'1.5rem', color:'white', fontWeight:'bold', boxShadow:'0 2px 5px rgba(0,0,0,0.1)'}}>
-                          {dir.nombres.charAt(0)}
-                      </div>
-                      <div>
-                          <h3 style={{margin: '0', color: '#333', fontSize:'1.1rem'}}>{dir.nombres} {dir.apellidos}</h3>
-                          <div style={{fontSize:'0.8rem', color:'#666'}}>{dir.cargo || 'Dirigente'} • {dir.rama ? dir.rama.nombre : 'Sin Rama'}</div>
-                      </div>
-                  </div>
+      {estado === 'cargando' && <Skeleton className="h-64 w-full" />}
 
-                  <div style={{padding: '20px', flex: 1}}>
-                      {/* DATOS CONTACTO */}
-                      <div style={{marginBottom: '15px'}}>
-                          <div style={{fontSize:'0.8rem', color:'#888'}}>📧 {dir.email || '-'}</div>
-                          <div style={{fontSize:'0.8rem', color:'#888'}}>📞 {dir.telefono || '-'}</div>
-                      </div>
+      {estado === 'error' && (
+        <Alert>
+          <ServerCrashIcon />
+          <AlertTitle>No se pudo cargar el equipo</AlertTitle>
+          <AlertDescription>El servidor no responde. Vuelve a intentarlo en unos minutos.</AlertDescription>
+        </Alert>
+      )}
 
-                      {/* CHECKLIST DOCUMENTOS */}
-                      <div style={{backgroundColor:'#fcfcfc', padding:'10px', borderRadius:'8px', border:'1px solid #eee'}}>
-                          <div style={{fontSize:'0.75rem', fontWeight:'bold', color:'#00B4D8', marginBottom:'5px', textTransform:'uppercase'}}>Documentación</div>
-                          <DocCheck label="Cert. Antecedentes" checked={dir.docAntecedentes} />
-                          <DocCheck label="Cert. Inhabilidad" checked={dir.docInhabilidad} />
-                          <DocCheck label="Curriculum Vitae" checked={dir.docCurriculum} />
-                          <DocCheck label="Curriculum Scout" checked={dir.docCurriculumScout} />
-                          <DocCheck label="Cert. Nacimiento" checked={dir.docNacimiento} />
-                      </div>
-                  </div>
+      {estado === 'listo' && visibles.length === 0 && (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UserCogIcon />
+            </EmptyMedia>
+            <EmptyTitle>{dirigentes.length ? 'Nadie coincide' : 'Todavía no hay dirigentes'}</EmptyTitle>
+            <EmptyDescription>
+              {dirigentes.length ? 'Prueba con otra búsqueda, otra rama o quita el filtro.' : 'Agrega al primer integrante del equipo adulto.'}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            {dirigentes.length ? (
+              <Button variant="outline" onClick={() => { setBusqueda(''); setRamaFiltro(TODAS); setSoloPendientes(false); }}>
+                Quitar filtros
+              </Button>
+            ) : (
+              <Button onClick={() => setEditando({})}>Agregar dirigente</Button>
+            )}
+          </EmptyContent>
+        </Empty>
+      )}
 
-                  {/* ACCIONES */}
-                  <div style={{padding: '15px 20px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', gap:'10px'}}>
-                      <button onClick={() => handleOpenModal(dir)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.2rem'}} title="Editar">✏️</button>
-                      <button onClick={() => handleDelete(dir.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.2rem', color:'#ED1C24'}} title="Eliminar">🗑️</button>
-                  </div>
-              </div>
-          ))}
-      </div>
-
-      {showModal && (
-        <div style={modalOverlayStyle} onClick={(e) => { if(e.target === e.currentTarget) handleCloseModal() }}>
-            <div style={modalContentStyle}>
-                <h2 style={{color: '#222', marginTop: 0, marginBottom: '25px', textAlign: 'center'}}>{isEditing ? 'Editar Dirigente' : 'Nuevo Dirigente'}</h2>
-                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-                    <div style={{display: isMobile ? 'block' : 'flex', gap: '15px'}}>
-                        <input name="nombres" value={formData.nombres} onChange={handleInputChange} placeholder="Nombres" style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box', marginBottom: isMobile ? '15px' : '0'}} required />
-                        <input name="apellidos" value={formData.apellidos} onChange={handleInputChange} placeholder="Apellidos" style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box'}} required />
+      {estado === 'listo' && visibles.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Rama</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead>Documentación</TableHead>
+                <TableHead className="text-right">
+                  <span className="sr-only">Acciones</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibles.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell>
+                    <p className="font-medium">
+                      {d.nombres} {d.apellidos}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{d.cargo || 'Sin cargo'}</p>
+                  </TableCell>
+                  <TableCell>{d.rama ? <RamaBadge rama={d.rama} /> : <span className="text-muted-foreground">Grupo</span>}</TableCell>
+                  <TableCell className="text-sm">
+                    {d.email || d.telefono ? (
+                      <>
+                        {d.email && <p>{d.email}</p>}
+                        {d.telefono && <p className="tabular-nums text-muted-foreground">{d.telefono}</p>}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Sin datos</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <EstadoDocumentos dirigente={d} onAbrir={() => setDocumentosDe(d.id)} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setDocumentosDe(d.id)}>
+                        <FolderOpenIcon data-icon="inline-start" />
+                        Documentos
+                      </Button>
+                      <Button variant="ghost" size="icon" aria-label={`Editar a ${d.nombres}`} onClick={() => setEditando(d)}>
+                        <PencilIcon />
+                      </Button>
+                      <Button variant="ghost" size="icon" aria-label={`Eliminar a ${d.nombres}`} onClick={() => setAEliminar(d)}>
+                        <Trash2Icon />
+                      </Button>
                     </div>
-
-                    <div style={{display: isMobile ? 'block' : 'flex', gap: '15px'}}>
-                        <input name="email" value={formData.email} onChange={handleInputChange} placeholder="Email" style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box', marginBottom: isMobile ? '15px' : '0'}} />
-                        <input name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="Teléfono" style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box'}} />
-                    </div>
-
-                    <div style={{display: 'flex', gap: '15px'}}>
-                        <input name="cargo" value={formData.cargo} onChange={handleInputChange} placeholder="Cargo (Ej: Responsable)" style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd'}} />
-                        <select name="ramaId" value={formData.ramaId} onChange={handleInputChange} style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd'}}>
-                            <option value="">-- Asignar Rama --</option>
-                            {ramas.map(r => (<option key={r.id} value={r.id}>{r.nombre}</option>))}
-                        </select>
-                    </div>
-
-                    <div style={{backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #eee'}}>
-                        <label style={{display:'block', fontSize:'0.9rem', color:'#00B4D8', fontWeight:'bold', marginBottom:'10px'}}>Control de Documentación:</label>
-                        <div style={{display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px'}}>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}><input type="checkbox" name="docAntecedentes" checked={formData.docAntecedentes} onChange={handleInputChange} /> Cert. Antecedentes</label>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}><input type="checkbox" name="docInhabilidad" checked={formData.docInhabilidad} onChange={handleInputChange} /> Cert. Inhabilidad</label>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}><input type="checkbox" name="docCurriculum" checked={formData.docCurriculum} onChange={handleInputChange} /> Curriculum Vitae</label>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}><input type="checkbox" name="docCurriculumScout" checked={formData.docCurriculumScout} onChange={handleInputChange} /> Curriculum Scout</label>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}><input type="checkbox" name="docNacimiento" checked={formData.docNacimiento} onChange={handleInputChange} /> Cert. Nacimiento</label>
-                        </div>
-                    </div>
-
-                    <div style={{display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '10px'}}>
-                        <button type="button" onClick={handleCloseModal} style={{padding: '12px 25px', border: '1px solid #ccc', background: '#f8f9fa', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#555'}}>Cancelar</button>
-                        <button type="submit" style={btnPrimaryStyle}>Guardar</button>
-                    </div>
-                </form>
-            </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      <FormularioDirigente
+        abierto={editando !== null}
+        onCambio={(abierto) => !abierto && setEditando(null)}
+        dirigente={editando?.id ? editando : null}
+        ramas={ramas}
+        onGuardado={recargar}
+      />
+      <DocumentacionDirigente
+        dirigente={dirigentes.find((d) => d.id === documentosDe) ?? null}
+        onCerrar={() => setDocumentosDe(null)}
+        onCambio={recargar}
+      />
+      <ConfirmarEliminar
+        abierto={!!aEliminar}
+        onCambio={(abierto) => !abierto && setAEliminar(null)}
+        titulo={`¿Quitar a ${aEliminar?.nombres} ${aEliminar?.apellidos} del equipo?`}
+        descripcion="Se borrará su ficha y todos los archivos de su documentación."
+        accion="Quitar del equipo"
+        onConfirmar={eliminar}
+      />
     </div>
   );
 }

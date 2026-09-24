@@ -1,291 +1,445 @@
-import React, { useState, useEffect } from 'react';
-import { authFetch } from '../helpers/authFetch';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  CalendarDaysIcon,
+  ClockIcon,
+  FileSignatureIcon,
+  LoaderCircleIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  ServerCrashIcon,
+  Trash2Icon,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-const typeColors = {
-  CAMPAMENTO: '#009245', 
-  REUNION: '#00B4D8',    
-  CEREMONIA: '#5d448b',  
-  SERVICIO: '#ED1C24',   
-  PASEO: '#fced21',      
-  DISTRITAL: '#1b2a7c',  
-  OTRO: '#888'           
-};
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ConfirmarEliminar } from '@/components/admin/ConfirmarEliminar';
+import { Encabezado } from '@/components/admin/Encabezado';
+import { RamaBadge, colorDeRama } from '@/components/admin/RamaBadge';
+import { NINGUNA, NUEVA, SelectConNuevo } from '@/components/admin/SelectConNuevo';
+import { RAMAS } from '@/lib/ramas';
+import { api, incluye, useDatosPanel } from '@/lib/panel';
 
-// Colores para los chips de selección de ramas
-const ramaChipColors = {
-  MANADA: '#fced21',
-  BANDADA: '#1b2a7c',
-  TROPA: '#009245',
-  COMPANIA: '#66ccbe',
-  AVANZADA: '#5d448b',
-  CLAN: '#ED1C24'
-};
+// Deben coincidir con TipoEvento en el backend.
+const TIPOS = [
+  { clave: 'REUNION', etiqueta: 'Reunión' },
+  { clave: 'CAMPAMENTO', etiqueta: 'Campamento' },
+  { clave: 'PASEO', etiqueta: 'Salida' },
+  { clave: 'CEREMONIA', etiqueta: 'Ceremonia' },
+  { clave: 'SERVICIO', etiqueta: 'Servicio' },
+  { clave: 'DISTRITAL', etiqueta: 'Distrital' },
+  { clave: 'OTRO', etiqueta: 'Otro' },
+];
+const etiquetaTipo = (clave) => TIPOS.find((t) => t.clave === clave)?.etiqueta ?? 'Evento';
+const ORDEN_RAMAS = RAMAS.map((r) => r.clave);
 
-const ordenRamas = ['MANADA', 'BANDADA', 'TROPA', 'COMPANIA', 'AVANZADA', 'CLAN'];
+const VACIO = { id: null, titulo: '', tipo: 'REUNION', fechaInicio: '', fechaFin: '', ramaIds: [], ubicacionId: NINGUNA, costo: '', descripcion: '', requiereAutorizacion: false };
 
-function Eventos() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+const hora = (fecha) => new Date(fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+const diaLargo = (fecha) => new Date(fecha).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const [eventos, setEventos] = useState([]);
-  const [ramas, setRamas] = useState([]);
-  const [ubicaciones, setUbicaciones] = useState([]);
+function horario(inicio, fin) {
+  if (!inicio) return 'Sin fecha';
+  if (!fin) return `${diaLargo(inicio)}, ${hora(inicio)}`;
+  const mismoDia = new Date(inicio).toDateString() === new Date(fin).toDateString();
+  return mismoDia ? `${hora(inicio)} a ${hora(fin)}` : `Hasta el ${diaLargo(fin)}, ${hora(fin)}`;
+}
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+function FormularioEvento({ abierto, onCambio, evento, ramas, ubicaciones, onGuardado }) {
+  const [form, setForm] = useState(VACIO);
+  const [nuevaUbicacion, setNuevaUbicacion] = useState({ nombre: '', direccion: '' });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
 
-  const [showNewUbicacionForm, setShowNewUbicacionForm] = useState(false);
-  const [newUbicacion, setNewUbicacion] = useState({ nombre: '', direccion: '' });
+  useEffect(() => {
+    if (!abierto) return;
+    setError('');
+    setNuevaUbicacion({ nombre: '', direccion: '' });
+    setForm(
+      evento
+        ? {
+            id: evento.id,
+            titulo: evento.titulo ?? '',
+            tipo: evento.tipo ?? 'REUNION',
+            fechaInicio: evento.fechaInicio?.slice(0, 16) ?? '',
+            fechaFin: evento.fechaFin?.slice(0, 16) ?? '',
+            ramaIds: (evento.ramas ?? []).map((r) => String(r.id)),
+            ubicacionId: evento.ubicacion ? String(evento.ubicacion.id) : NINGUNA,
+            costo: evento.costo ? String(evento.costo) : '',
+            descripcion: evento.descripcion ?? '',
+            requiereAutorizacion: !!evento.requiereAutorizacion,
+          }
+        : VACIO
+    );
+  }, [abierto, evento]);
 
-  const [formData, setFormData] = useState({
-    id: null, titulo: '', tipo: 'REUNION',
-    fechaInicio: '', fechaFin: '',
-    ramaIds: [], 
-    ubicacionId: '',
-    descripcion: '', costo: 0
+  const campo = (nombre) => ({
+    id: `evento-${nombre}`,
+    value: form[nombre],
+    onChange: (e) => setForm((f) => ({ ...f, [nombre]: e.target.value })),
   });
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const finAntesDeInicio = form.fechaInicio && form.fechaFin && form.fechaFin < form.fechaInicio;
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [resEv, resRa, resUb] = await Promise.all([
-        authFetch('http://localhost:8080/api/eventos'),
-        authFetch('http://localhost:8080/api/ramas'),
-        authFetch('http://localhost:8080/api/ubicaciones-eventos')
-      ]);
-      
-      if (resEv.ok) setEventos(await resEv.json());
-      if (resRa.ok) {
-          const ramasData = await resRa.json();
-          setRamas(ramasData.sort((a, b) => ordenRamas.indexOf(a.tipo) - ordenRamas.indexOf(b.tipo)));
-      }
-      if (resUb.ok) setUbicaciones(await resUb.json());
-    } catch (error) { console.error("Error cargando eventos:", error); }
-  };
-
-  // --- HANDLERS ---
-  const handleOpenModal = (evento = null) => {
-    setShowNewUbicacionForm(false);
-    setNewUbicacion({ nombre: '', direccion: '' });
-
-    if (evento) {
-      setIsEditing(true);
-      setFormData({
-        id: evento.id, titulo: evento.titulo, tipo: evento.tipo,
-        fechaInicio: evento.fechaInicio ? evento.fechaInicio.slice(0, 16) : '', 
-        fechaFin: evento.fechaFin ? evento.fechaFin.slice(0, 16) : '',
-        ramaIds: evento.ramas ? evento.ramas.map(r => r.id) : [],
-        ubicacionId: evento.ubicacion ? evento.ubicacion.id : '',
-        descripcion: evento.descripcion || '',
-        costo: evento.costo || 0
-      });
-    } else {
-      setIsEditing(false);
-      setFormData({ id: null, titulo: '', tipo: 'REUNION', fechaInicio: '', fechaFin: '', ramaIds: [], ubicacionId: '', descripcion: '', costo: 0 });
-    }
-    setShowModal(true);
-    setTimeout(() => setModalVisible(true), 10);
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setTimeout(() => setShowModal(false), 300);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'ubicacionId') {
-        if (value === 'CREAR_NUEVO') { setShowNewUbicacionForm(true); setFormData({ ...formData, ubicacionId: '' }); } 
-        else { setShowNewUbicacionForm(false); setFormData({ ...formData, ubicacionId: value }); }
-    } else { setFormData({ ...formData, [name]: value }); }
-  };
-
-  const toggleRamaSelection = (id) => {
-      const currentIds = formData.ramaIds;
-      if (currentIds.includes(id)) {
-          setFormData({ ...formData, ramaIds: currentIds.filter(rid => rid !== id) });
-      } else {
-          setFormData({ ...formData, ramaIds: [...currentIds, id] });
-      }
-  };
-
-  const handleNewUbicacionChange = (e) => { setNewUbicacion({ ...newUbicacion, [e.target.name]: e.target.value }); };
-  const cancelNewUbicacion = () => { setShowNewUbicacionForm(false); setFormData({ ...formData, ubicacionId: '' }); };
-
-  const handleSubmit = async (e) => {
+  const guardar = async (e) => {
     e.preventDefault();
-    let finalUbicacionId = formData.ubicacionId;
-
+    setGuardando(true);
+    setError('');
     try {
-        if (showNewUbicacionForm) {
-            const resUbi = await authFetch('http://localhost:8080/api/ubicaciones-eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUbicacion) });
-            if (!resUbi.ok) throw new Error("Error creando ubicación");
-            const ubiCreada = await resUbi.json();
-            finalUbicacionId = ubiCreada.id;
-            setUbicaciones([...ubicaciones, ubiCreada]);
-        }
-
-        const payload = {
-            titulo: formData.titulo, tipo: formData.tipo,
-            fechaInicio: formData.fechaInicio, fechaFin: formData.fechaFin,
-            descripcion: formData.descripcion, costo: formData.costo,
-            ramas: formData.ramaIds.map(id => ({ id })), 
-            ubicacion: finalUbicacionId ? { id: finalUbicacionId } : null
-        };
-        if (isEditing) payload.id = formData.id;
-
-        await authFetch('http://localhost:8080/api/eventos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        handleCloseModal();
-        setTimeout(() => { fetchData(); alert(isEditing ? "Evento actualizado" : "Evento creado"); }, 300);
-    } catch (error) { console.error(error); alert("Error al guardar"); }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Eliminar este evento?")) {
-        try { await authFetch(`http://localhost:8080/api/eventos/${id}`, { method: 'DELETE' }); fetchData(); } catch (error) { console.error(error); }
+      let ubicacionId = form.ubicacionId;
+      if (ubicacionId === NUEVA) {
+        ubicacionId = (await api('/api/ubicaciones-eventos', { method: 'POST', body: nuevaUbicacion })).id;
+      }
+      await api('/api/eventos', {
+        method: 'POST',
+        body: {
+          ...(form.id && { id: form.id }),
+          titulo: form.titulo,
+          tipo: form.tipo,
+          fechaInicio: form.fechaInicio || null,
+          fechaFin: form.fechaFin || null,
+          ramas: form.ramaIds.map((id) => ({ id: Number(id) })),
+          ubicacion: ubicacionId === NINGUNA ? null : { id: Number(ubicacionId) },
+          costo: Number(form.costo) || 0,
+          descripcion: form.descripcion,
+          requiereAutorizacion: form.requiereAutorizacion,
+        },
+      });
+      toast.success(form.id ? 'Cambios guardados' : `${form.titulo} quedó en la agenda`);
+      onGuardado();
+      onCambio(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
     }
   };
-
-  const formatearFecha = (fechaString) => {
-      if (!fechaString) return '';
-      const fecha = new Date(fechaString);
-      return fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' });
-  };
-
-  const eventosFiltrados = eventos.filter(e => 
-    e.titulo.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (e.ubicacion && e.ubicacion.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // --- ESTILOS RESPONSIVOS ---
-  const containerStyle = { padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Montserrat', sans-serif" };
-  const headerCardStyle = { backgroundColor: 'white', padding: '25px', borderRadius: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #eee', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '15px' : '0' };
-  const titleStyle = { color: '#00B4D8', margin: 0, textTransform: 'uppercase', fontSize: isMobile ? '1.5rem' : '1.8rem', textAlign: isMobile ? 'center' : 'left' };
-  const searchInputStyle = { padding: '12px 15px', borderRadius: '8px', border: '1px solid #ddd', width: isMobile ? '100%' : '300px', marginRight: isMobile ? '0' : '15px', fontSize: '0.95rem', outline: 'none', transition: 'border 0.2s', boxSizing: 'border-box' };
-  const btnPrimaryStyle = { backgroundColor: '#00B4D8', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem', boxShadow: '0 4px 10px rgba(0, 180, 216, 0.3)', width: isMobile ? '100%' : 'auto' };
-  const gridStyle = { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' };
-  const cardStyle = { backgroundColor: 'white', borderRadius: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #eee', overflow: 'hidden', transition: 'transform 0.2s', position: 'relative' };
-  
-  const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(3px)', opacity: modalVisible ? 1 : 0, transition: 'opacity 0.3s ease-in-out' };
-  const modalContentStyle = { backgroundColor: 'white', padding: '40px', borderRadius: '20px', width: isMobile ? '90%' : '550px', maxHeight: '90vh', overflowY: 'auto', transform: modalVisible ? 'translateY(0) scale(1)' : 'translateY(-20px) scale(0.95)', opacity: modalVisible ? 1 : 0, transition: 'all 0.3s ease-in-out' };
-  const miniFormContainerStyle = { transition: 'all 0.3s ease-in-out', overflow: 'hidden', maxHeight: showNewUbicacionForm ? '500px' : '0px', opacity: showNewUbicacionForm ? 1 : 0, transform: showNewUbicacionForm ? 'translateY(0)' : 'translateY(-10px)' };
-  const miniFormStyle = { backgroundColor: '#f0f8ff', padding: '15px', borderRadius: '10px', border: '1px dashed #00B4D8', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' };
 
   return (
-    <div style={containerStyle}>
-      <div style={headerCardStyle}>
-        <div><h1 style={titleStyle}>Registro de Eventos</h1><p style={{color: '#888', margin: '5px 0 0 0', fontSize: '1rem', textAlign: isMobile ? 'center' : 'left'}}>Calendario y actividades del grupo</p></div>
-        <div style={{display:'flex', flexDirection: isMobile?'column':'row', alignItems:'center', gap: isMobile?'10px':'0', width: isMobile?'100%':'auto'}}>
-            <input type="text" placeholder="🔍 Buscar evento..." style={searchInputStyle} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <button style={btnPrimaryStyle} onClick={() => handleOpenModal()}>+ Nuevo Evento</button>
-        </div>
-      </div>
-
-      <div style={gridStyle}>
-          {eventosFiltrados.map(ev => (
-              <div key={ev.id} style={cardStyle} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                  <div style={{height: '8px', backgroundColor: typeColors[ev.tipo] || typeColors.OTRO}}></div>
-                  <div style={{padding: '20px'}}>
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px'}}>
-                          <span style={{fontSize:'0.7rem', fontWeight:'bold', color: typeColors[ev.tipo] || '#888', border: `1px solid ${typeColors[ev.tipo]}`, padding:'2px 8px', borderRadius:'10px'}}>{ev.tipo}</span>
-                          <div style={{fontSize:'0.7rem', color:'#666', textAlign:'right', maxWidth:'60%'}}>
-                              {(!ev.ramas || ev.ramas.length === 0) ? (<span style={{fontWeight:'bold'}}>⚜️ Grupo Completo</span>) : (ev.ramas.map(r => r.nombre.split(" ")[0]).join(", "))}
-                          </div>
-                      </div>
-                      <h3 style={{margin: '0 0 10px 0', color: '#333', fontSize:'1.2rem'}}>{ev.titulo}</h3>
-                      <div style={{display:'flex', alignItems:'center', gap:'5px', color:'#666', fontSize:'0.9rem', marginBottom:'5px'}}><span>📅</span> {formatearFecha(ev.fechaInicio)}</div>
-                      {ev.ubicacion && (<div style={{display:'flex', alignItems:'center', gap:'5px', color:'#666', fontSize:'0.9rem', marginBottom:'15px'}}><span>📍</span> {ev.ubicacion.nombre}</div>)}
-                      <p style={{color: '#555', fontSize: '0.9rem', lineHeight: '1.4', marginBottom:'20px', height: '40px', overflow: 'hidden', textOverflow: 'ellipsis'}}>{ev.descripcion}</p>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px'}}>
-                          <span style={{fontWeight:'bold', color: '#333'}}>${ev.costo ? ev.costo.toLocaleString() : '0'}</span>
-                          <div>
-                              <button onClick={() => handleOpenModal(ev)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.2rem', marginRight:'10px'}}>✏️</button>
-                              <button onClick={() => handleDelete(ev.id)} style={{background:'none', border:'none', cursor:'pointer', fontSize:'1.2rem', color:'#ED1C24'}}>🗑️</button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          ))}
-      </div>
-
-      {showModal && (
-        <div style={modalOverlayStyle} onClick={(e) => { if(e.target === e.currentTarget) handleCloseModal() }}>
-            <div style={modalContentStyle}>
-                <h2 style={{color: '#222', marginTop: 0, marginBottom: '25px', textAlign: 'center'}}>{isEditing ? 'Editar Evento' : 'Nuevo Evento'}</h2>
-                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-                    <input name="titulo" value={formData.titulo} onChange={handleInputChange} placeholder="Título del Evento" style={{padding: '12px', borderRadius: '8px', border: '1px solid #ddd'}} required />
-                    
-                    <div style={{display: isMobile ? 'flex' : 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '15px'}}>
-                        <select name="tipo" value={formData.tipo} onChange={handleInputChange} style={{padding: '12px', flex:1, borderRadius: '8px', border: '1px solid #ddd'}}>
-                            {Object.keys(typeColors).map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={{display:'block', fontSize:'0.9rem', color:'#666', marginBottom:'8px'}}>Participantes (Selecciona las unidades):</label>
-                        {ramas.length === 0 ? (
-                            <div style={{fontSize:'0.8rem', color:'#ED1C24', fontStyle:'italic', padding:'10px', background:'#fff0f0', borderRadius:'5px'}}>⚠️ No se encontraron unidades cargadas.</div>
-                        ) : (
-                            <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
-                                {ramas.map(rama => {
-                                    const isSelected = formData.ramaIds.includes(rama.id);
-                                    return (
-                                        <div key={rama.id} onClick={() => toggleRamaSelection(rama.id)} style={{padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold', backgroundColor: isSelected ? ramaChipColors[rama.tipo] || '#00B4D8' : '#f0f0f0', color: isSelected ? (['BANDADA', 'AVANZADA', 'CLAN'].includes(rama.tipo) ? 'white' : '#222') : '#888', border: isSelected ? '1px solid transparent' : '1px solid #ddd', transition: 'all 0.2s', userSelect: 'none'}}>{rama.nombre}</div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                        <div style={{fontSize:'0.75rem', color:'#888', marginTop:'5px', fontStyle:'italic'}}>* Si no seleccionas ninguna, se considera "Grupo Completo".</div>
-                    </div>
-
-                    <div style={{display: isMobile ? 'flex' : 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '15px'}}>
-                        <div style={{flex:1}}><label style={{fontSize:'0.8rem', color:'#666'}}>Inicio</label><input type="datetime-local" name="fechaInicio" value={formData.fechaInicio} onChange={handleInputChange} style={{width:'100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing:'border-box'}} required /></div>
-                        <div style={{flex:1}}><label style={{fontSize:'0.8rem', color:'#666'}}>Fin</label><input type="datetime-local" name="fechaFin" value={formData.fechaFin} onChange={handleInputChange} style={{width:'100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', boxSizing:'border-box'}} required /></div>
-                    </div>
-
-                    <div>
-                        <select name="ubicacionId" value={formData.ubicacionId} onChange={handleInputChange} style={{padding: '12px', width:'100%', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: showNewUbicacionForm ? '#f0f8ff' : 'white'}}>
-                            <option value="">-- Seleccionar Ubicación --</option><option value="CREAR_NUEVO" style={{fontWeight: 'bold', color: '#00B4D8'}}>+ Nueva Ubicación...</option><option disabled>----------------</option>{ubicaciones.map(u => (<option key={u.id} value={u.id}>{u.nombre}</option>))}
-                        </select>
-                        {showNewUbicacionForm && (
-                            <div style={miniFormContainerStyle}>
-                                <div style={miniFormStyle}>
-                                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px'}}><span style={{fontSize:'0.8rem', color:'#00B4D8', fontWeight:'bold'}}>Nueva Ubicación de Evento:</span><button type="button" onClick={cancelNewUbicacion} style={{background: 'none', border:'none', cursor:'pointer', fontWeight:'bold', color: '#666', fontSize: '1.1rem'}} title="Cancelar">✕</button></div>
-                                    <input name="nombre" value={newUbicacion.nombre} onChange={handleNewUbicacionChange} placeholder="Nombre (Ej: Campo Escuela)" style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc'}} required />
-                                    <input name="direccion" value={newUbicacion.direccion} onChange={handleNewUbicacionChange} placeholder="Dirección Exacta" style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc'}} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{display: 'flex', gap: '15px'}}>
-                        {/* 2. SOLUCIÓN AQUÍ: Agregamos el Label y envolvemos en div para consistencia */}
-                        <div style={{flex: 1}}>
-                            <label style={{fontSize:'0.8rem', color:'#666', display:'block', marginBottom:'5px'}}>Costo / Cuota ($)</label>
-                            <input type="number" name="costo" value={formData.costo} onChange={handleInputChange} placeholder="0" style={{padding: '12px', borderRadius: '8px', border: '1px solid #ddd', width: '100%', boxSizing: 'border-box'}} />
-                        </div>
-                    </div>
-
-                    <textarea name="descripcion" value={formData.descripcion} onChange={handleInputChange} placeholder="Detalles del evento..." rows="3" style={{padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontFamily: 'inherit'}} />
-
-                    <div style={{display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '10px'}}>
-                        <button type="button" onClick={handleCloseModal} style={{padding: '12px 25px', border: '1px solid #ccc', background: '#f8f9fa', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: '#555'}}>Cancelar</button>
-                        <button type="submit" style={btnPrimaryStyle}>Guardar Evento</button>
-                    </div>
-                </form>
+    <Dialog open={abierto} onOpenChange={onCambio}>
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-xl">
+        <form onSubmit={guardar} className="flex flex-col gap-6">
+          <DialogHeader>
+            <DialogTitle>{form.id ? `Editar ${evento?.titulo}` : 'Agendar evento'}</DialogTitle>
+            <DialogDescription>Reuniones, salidas y campamentos del grupo o de ramas específicas.</DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
+              <Field>
+                <FieldLabel htmlFor="evento-titulo">Nombre</FieldLabel>
+                <Input {...campo('titulo')} placeholder="Campamento de invierno" required />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="evento-tipo">Tipo</FieldLabel>
+                <Select value={form.tipo} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
+                  <SelectTrigger id="evento-tipo">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {TIPOS.map((t) => (
+                        <SelectItem key={t.clave} value={t.clave}>
+                          {t.etiqueta}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="evento-fechaInicio">Empieza</FieldLabel>
+                <Input {...campo('fechaInicio')} type="datetime-local" required />
+              </Field>
+              <Field data-invalid={finAntesDeInicio || undefined}>
+                <FieldLabel htmlFor="evento-fechaFin">Termina</FieldLabel>
+                <Input {...campo('fechaFin')} type="datetime-local" min={form.fechaInicio} aria-invalid={finAntesDeInicio || undefined} />
+                {finAntesDeInicio && <FieldDescription>Debe ser después del inicio.</FieldDescription>}
+              </Field>
             </div>
+
+            <FieldSet>
+              <FieldLegend variant="label">Ramas que participan</FieldLegend>
+              <FieldDescription>Si no eliges ninguna, es para el grupo completo.</FieldDescription>
+              <ToggleGroup
+                type="multiple"
+                variant="outline"
+                value={form.ramaIds}
+                onValueChange={(ids) => setForm((f) => ({ ...f, ramaIds: ids }))}
+                className="flex-wrap justify-start"
+              >
+                {ramas.map((r) => (
+                  <ToggleGroupItem key={r.id} value={String(r.id)} className="gap-1.5">
+                    <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: colorDeRama(r.tipo) }} />
+                    {r.nombre}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </FieldSet>
+
+            <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+              <Field>
+                <FieldLabel htmlFor="evento-ubicacion">Lugar</FieldLabel>
+                <SelectConNuevo
+                  id="evento-ubicacion"
+                  valor={form.ubicacionId}
+                  onCambio={(v) => setForm((f) => ({ ...f, ubicacionId: v }))}
+                  opciones={ubicaciones}
+                  vacio="Por definir"
+                  nuevo="Registrar lugar nuevo"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="evento-costo">Costo por persona</FieldLabel>
+                <Input {...campo('costo')} type="number" min="0" step="500" inputMode="numeric" placeholder="0" />
+              </Field>
+            </div>
+            {form.ubicacionId === NUEVA && (
+              <div className="grid gap-4 rounded-lg border bg-muted/40 p-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="nuevo-lugar">Nombre del lugar</FieldLabel>
+                  <Input id="nuevo-lugar" value={nuevaUbicacion.nombre} onChange={(e) => setNuevaUbicacion((u) => ({ ...u, nombre: e.target.value }))} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="nueva-direccion-lugar">Dirección</FieldLabel>
+                  <Input id="nueva-direccion-lugar" value={nuevaUbicacion.direccion} onChange={(e) => setNuevaUbicacion((u) => ({ ...u, direccion: e.target.value }))} />
+                </Field>
+              </div>
+            )}
+
+            <Field>
+              <FieldLabel htmlFor="evento-descripcion">Descripción</FieldLabel>
+              <Textarea {...campo('descripcion')} rows={3} placeholder="Qué llevar, punto de encuentro, horarios…" />
+            </Field>
+
+            <div className="flex items-start gap-3 rounded-lg border p-4">
+              <Switch
+                id="evento-autorizacion"
+                checked={form.requiereAutorizacion}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, requiereAutorizacion: v }))}
+              />
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="evento-autorizacion">Pedir autorización a los apoderados</Label>
+                <p className="text-sm text-muted-foreground">
+                  Aparecerá en la biblioteca para que suban el formulario firmado. Publica el formulario en Biblioteca, Documentos.
+                </p>
+              </div>
+            </div>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={guardando || !form.titulo || !form.fechaInicio || finAntesDeInicio || (form.ubicacionId === NUEVA && !nuevaUbicacion.nombre)}
+            >
+              {guardando && <LoaderCircleIcon data-icon="inline-start" className="animate-spin" />}
+              {form.id ? 'Guardar cambios' : 'Agendar'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FilaEvento({ evento, onEditar, onEliminar }) {
+  const inicio = evento.fechaInicio ? new Date(evento.fechaInicio) : null;
+  const ramas = [...(evento.ramas ?? [])].sort((a, b) => ORDEN_RAMAS.indexOf(a.tipo) - ORDEN_RAMAS.indexOf(b.tipo));
+
+  return (
+    <li className="flex gap-4 rounded-lg border bg-card p-4">
+      <div className="flex w-14 shrink-0 flex-col items-center rounded-md bg-grafito py-2 text-white" aria-hidden="true">
+        <span className="text-xs uppercase">{inicio?.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '')}</span>
+        <span className="font-display text-3xl leading-none">{inicio?.getDate() ?? '?'}</span>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-lg font-semibold leading-tight">{evento.titulo}</h3>
+          <Badge variant="secondary">{etiquetaTipo(evento.tipo)}</Badge>
+          {evento.requiereAutorizacion && (
+            <Badge asChild variant="outline" className="gap-1">
+              <Link to="/admin/autorizaciones">
+                <FileSignatureIcon />
+                Pide autorización
+              </Link>
+            </Badge>
+          )}
         </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <ClockIcon className="size-4" />
+            {horario(evento.fechaInicio, evento.fechaFin)}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <MapPinIcon className="size-4" />
+            {evento.ubicacion?.nombre ?? 'Lugar por definir'}
+          </span>
+          {evento.costo > 0 && <span className="tabular-nums">${evento.costo.toLocaleString('es-CL')} por persona</span>}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {ramas.length ? ramas.map((r) => <RamaBadge key={r.id} rama={r} />) : <Badge variant="outline">Grupo completo</Badge>}
+        </div>
+        {evento.descripcion && <p className="line-clamp-2 text-sm text-muted-foreground">{evento.descripcion}</p>}
+      </div>
+      <div className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-start">
+        <Button variant="ghost" size="icon" aria-label={`Editar ${evento.titulo}`} onClick={() => onEditar(evento)}>
+          <PencilIcon />
+        </Button>
+        <Button variant="ghost" size="icon" aria-label={`Eliminar ${evento.titulo}`} onClick={() => onEliminar(evento)}>
+          <Trash2Icon />
+        </Button>
+      </div>
+    </li>
+  );
+}
+
+function Eventos() {
+  const { eventos, ramas, ubicaciones, estado, recargar } = useDatosPanel({
+    eventos: '/api/eventos',
+    ramas: '/api/ramas',
+    ubicaciones: '/api/ubicaciones-eventos',
+  });
+  const [cuando, setCuando] = useState('proximos');
+  const [busqueda, setBusqueda] = useState('');
+  const [editando, setEditando] = useState(null);
+  const [aEliminar, setAEliminar] = useState(null);
+
+  const ramasOrdenadas = useMemo(() => [...ramas].sort((a, b) => ORDEN_RAMAS.indexOf(a.tipo) - ORDEN_RAMAS.indexOf(b.tipo)), [ramas]);
+
+  // Agrupa por mes. Próximos: del más cercano al más lejano; pasados: del más reciente al más antiguo.
+  const meses = useMemo(() => {
+    const ahora = new Date();
+    const terminado = (e) => new Date(e.fechaFin ?? e.fechaInicio) < ahora;
+    const lista = eventos
+      .filter((e) => e.fechaInicio)
+      .filter((e) => (cuando === 'proximos' ? !terminado(e) : terminado(e)))
+      .filter((e) => !busqueda || incluye(`${e.titulo} ${e.ubicacion?.nombre ?? ''} ${e.descripcion ?? ''}`, busqueda))
+      .sort((a, b) => (new Date(a.fechaInicio) - new Date(b.fechaInicio)) * (cuando === 'proximos' ? 1 : -1));
+    const grupos = new Map();
+    lista.forEach((e) => {
+      const mes = new Date(e.fechaInicio).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+      grupos.set(mes, [...(grupos.get(mes) ?? []), e]);
+    });
+    return [...grupos.entries()];
+  }, [eventos, cuando, busqueda]);
+
+  const eliminar = async () => {
+    try {
+      await api(`/api/eventos/${aEliminar.id}`, { method: 'DELETE' });
+      toast.success(`${aEliminar.titulo} salió de la agenda`);
+      recargar();
+    } catch (err) {
+      toast.error(err.message);
+    }
+    setAEliminar(null);
+  };
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <Encabezado titulo="Eventos" descripcion="La agenda del grupo: reuniones, salidas y campamentos.">
+        <Button onClick={() => setEditando({})}>
+          <PlusIcon data-icon="inline-start" />
+          Agendar evento
+        </Button>
+      </Encabezado>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <ToggleGroup type="single" variant="outline" value={cuando} onValueChange={(v) => v && setCuando(v)} aria-label="Qué eventos mostrar">
+          <ToggleGroupItem value="proximos">Próximos</ToggleGroupItem>
+          <ToggleGroupItem value="pasados">Pasados</ToggleGroupItem>
+        </ToggleGroup>
+        <div className="relative flex-1">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre o lugar" aria-label="Buscar eventos" className="pl-9" />
+        </div>
+      </div>
+
+      {estado === 'cargando' && <Skeleton className="h-64 w-full" />}
+
+      {estado === 'error' && (
+        <Alert>
+          <ServerCrashIcon />
+          <AlertTitle>No se pudo cargar la agenda</AlertTitle>
+          <AlertDescription>El servidor no responde. Vuelve a intentarlo en unos minutos.</AlertDescription>
+        </Alert>
       )}
+
+      {estado === 'listo' && meses.length === 0 && (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarDaysIcon />
+            </EmptyMedia>
+            <EmptyTitle>
+              {busqueda ? 'Ningún evento coincide' : cuando === 'proximos' ? 'No hay eventos próximos' : 'No hay eventos pasados'}
+            </EmptyTitle>
+            <EmptyDescription>{cuando === 'proximos' ? 'Agenda la próxima reunión o salida del grupo.' : 'Aquí quedarán los eventos que ya terminaron.'}</EmptyDescription>
+          </EmptyHeader>
+          {cuando === 'proximos' && !busqueda && (
+            <EmptyContent>
+              <Button onClick={() => setEditando({})}>Agendar evento</Button>
+            </EmptyContent>
+          )}
+        </Empty>
+      )}
+
+      {meses.map(([mes, lista]) => (
+        <section key={mes} className="flex flex-col gap-3">
+          <h2 className="font-display text-2xl uppercase text-muted-foreground">{mes}</h2>
+          <ul className="flex flex-col gap-3">
+            {lista.map((e) => (
+              <FilaEvento key={e.id} evento={e} onEditar={setEditando} onEliminar={setAEliminar} />
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <FormularioEvento
+        abierto={editando !== null}
+        onCambio={(abierto) => !abierto && setEditando(null)}
+        evento={editando?.id ? editando : null}
+        ramas={ramasOrdenadas}
+        ubicaciones={ubicaciones}
+        onGuardado={recargar}
+      />
+      <ConfirmarEliminar
+        abierto={!!aEliminar}
+        onCambio={(abierto) => !abierto && setAEliminar(null)}
+        titulo={`¿Eliminar ${aEliminar?.titulo}?`}
+        descripcion="Saldrá de la agenda del grupo."
+        accion="Eliminar evento"
+        onConfirmar={eliminar}
+      />
     </div>
   );
 }
