@@ -24,6 +24,11 @@ public class EventoService {
     }
 
     public Evento guardar(Evento evento) {
+        // El formulario de eventos no envía este campo: al editar se conserva el valor guardado.
+        if (evento.getRequiereAutorizacion() == null && evento.getId() != null) {
+            repository.findById(evento.getId())
+                    .ifPresent(actual -> evento.setRequiereAutorizacion(actual.getRequiereAutorizacion()));
+        }
         return repository.save(evento);
     }
 

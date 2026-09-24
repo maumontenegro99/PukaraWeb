@@ -5,7 +5,9 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.pukaraweb.PukaraWeb.equipo.DocumentacionService;
 import com.pukaraweb.PukaraWeb.model.Dirigente;
 import com.pukaraweb.PukaraWeb.repository.DirigenteRepository;
 
@@ -14,6 +16,9 @@ public class DirigenteService {
 
     @Autowired
     private DirigenteRepository repository;
+
+    @Autowired
+    private DocumentacionService documentacionService;
 
     public List<Dirigente> listarTodos() {
         return repository.findAll();
@@ -27,7 +32,9 @@ public class DirigenteService {
         return repository.save(dirigente);
     }
 
+    @Transactional
     public void eliminar(Long id) {
+        documentacionService.eliminarTodo(id);
         repository.deleteById(id);
     }
 }

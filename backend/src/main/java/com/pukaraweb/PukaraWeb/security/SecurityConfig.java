@@ -43,6 +43,10 @@ public class SecurityConfig {
                 // ✅ ZONA PÚBLICA: Cualquiera puede LEER noticias (GET) sin token
                 .requestMatchers(HttpMethod.GET, "/api/noticias/**").permitAll()
 
+                // ✅ ZONA PÚBLICA: Biblioteca (ver y descargar documentos, enviar autorizaciones firmadas)
+                .requestMatchers(HttpMethod.GET, "/api/biblioteca/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/biblioteca/autorizaciones").permitAll()
+
                 // 🔒 ZONA PRIVADA: Todo lo demás requiere Token (Crear noticias, inventario, miembros, etc.)
                 .anyRequest().authenticated()
             )

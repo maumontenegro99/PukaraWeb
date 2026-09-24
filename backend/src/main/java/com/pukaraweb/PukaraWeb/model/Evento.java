@@ -58,4 +58,7 @@ public class Evento {
     private String descripcion;
     
     private Integer costo;
+
+    // Si es true, los apoderados deben subir la autorización firmada desde la biblioteca.
+    private Boolean requiereAutorizacion;
 }
