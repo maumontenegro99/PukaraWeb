@@ -143,10 +143,41 @@ src/
 
 1. **Fase 2 de seguridad**: mass assignment (las entidades legadas reciben JSON directo y `POST` con `id` sobrescribe) → DTOs de entrada.
 2. Mensajes claros al borrar registros con dependencias (evento con autorizaciones o cobros, miembro con autorizaciones o pagos): hoy responde un error genérico.
-3. Imágenes de noticias: hoy van en base64 dentro de la base (`Noticia.imagenUrl` LONGTEXT) → moverlas a `AlmacenArchivos`.
+3. **Imágenes de noticias (hacer antes del deploy)**: hoy la portada va en base64 dentro de la base (`Noticia.imagenUrl` LONGTEXT,
+   hasta 2 MB por foto, +33 % por el base64) y `GET /api/noticias` devuelve **todas las noticias con sus fotos**: con ~50 noticias el
+   inicio del portal descargaría más de 100 MB. No es un problema de disco sino de velocidad (celulares con datos móviles). Plan:
+   - Guardar la portada como archivo con `AlmacenArchivos` (como los documentos) y que la noticia tenga solo la ruta. Migrar las existentes.
+   - Reducir la foto en el navegador antes de subirla (canvas, ~1600 px de ancho, JPG/WebP) para que pese 200–400 KB.
+   - Que el listado devuelva un DTO para la tarjeta (sin `contenido` completo); el detalle, la noticia entera.
+   - El editor (Quill) no permite imágenes dentro del cuerpo; mantenerlo así o pasarlas también por `AlmacenArchivos`.
 4. Migrar el backend legado al estilo por dominio (DTOs, validación con `@Valid`, `PUT` para editar) y eliminar `Adulto` e `Inventario`, que no se usan.
 5. Dividir el bundle del frontend (`React.lazy` para el panel) y agregar Flyway para migraciones.
-6. Autorización antigua de prueba con nombre "Jorge P?rez" en la base de desarrollo (oculta; se puede borrar desde la consola H2).
+6. Opcionales que reducen el crecimiento del almacenamiento (estimado hoy: ~1 GB al año en el peor caso, sobre todo autorizaciones;
+   un VPS chico basta por años y `AlmacenArchivos` permite pasar a B2/S3 más adelante sin reescribir):
+   - Comprimir en el navegador las **imágenes** (no los PDF) de autorizaciones y comprobantes antes de subirlas: una foto de celular
+     de ~3 MB queda en ~500 KB, legible, y la subida es más rápida con mala señal.
+   - Política de retención: borrar autorizaciones firmadas (registro y archivo) un tiempo después del evento, p. ej. 1 año. También lo
+     pide el trato de datos de menores (Ley 21.719, vigente desde fines de 2026). Preguntar al usuario el plazo antes de implementarlo.
+7. Autorización antigua de prueba con nombre "Jorge P?rez" en la base de desarrollo (oculta; se puede borrar desde la consola H2).
+
+## Deploy (plan conversado, aún no hecho)
+
+- Recomendado: **un VPS chico** (Hetzner CX22 / DigitalOcean / Vultr, ~USD 5–7/mes) con Docker Compose: **Caddy** (HTTPS automático,
+  sirve `frontend/dist` y reenvía `/api` al backend), **backend** (variables `JWT_SECRETO`, `DB_USER`, `DB_PASSWORD`,
+  `ADMIN_CLAVE_INICIAL` y volumen para `pukara.archivos.dir`) y **MySQL 8** con volumen, sin puerto público. Frontend y API en el
+  mismo dominio (`/api`) para no depender de CORS. Dominio `.cl` en NIC Chile.
+- Una sola instancia del backend: `LimiteEnvios` guarda los contadores en memoria.
+- Ajustes de código antes de publicar:
+  - **`server.forward-headers-strategy=native`**: detrás de Caddy, `request.getRemoteAddr()` sería la IP del proxy y todas las familias
+    compartirían un solo límite de envíos.
+  - CORS leído de una propiedad (hoy fijo en `http://localhost:5173` en `SecurityConfig`).
+  - `spring.jpa.show-sql=false` y Flyway en vez de `ddl-auto=update`.
+  - **Gestión de usuarios** en el panel (crear cuentas de dirigentes, asignar rol, restablecer contraseña): hoy no existe y solo hay `admin`.
+  - Imágenes de noticias (punto 3 de Pendientes) y, idealmente, la Fase 2 de seguridad.
+- Respaldos diarios cifrados (`mysqldump` + carpeta de archivos, con restic o similar) fuera del servidor (p. ej. Backblaze B2), 7 diarios
+  y 4 semanales, y **probar una restauración** antes de abrirlo a las familias. Servidor: SSH solo con llave, firewall 22/80/443,
+  `unattended-upgrades`, aviso de caída con UptimeRobot.
+- Datos personales: texto breve en la biblioteca sobre qué se guarda y quién lo ve; revisar lineamientos de la AGSCh.
 
 ## Particularidades del entorno (Windows)
 
