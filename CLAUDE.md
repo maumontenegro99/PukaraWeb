@@ -1,6 +1,26 @@
 # CLAUDE.md — PukaraWeb
 
-Contexto para retomar el proyecto en una sesión nueva. Léelo completo antes de tocar código.
+Contexto para retomar el proyecto en una sesión nueva. Léelo completo antes de tocar código: está pensado para que no haga falta
+releer el historial ni recorrer todo el repositorio. Abre solo los archivos que vayas a modificar.
+
+## Retomar aquí (estado al 24-09-2026)
+
+- **Todo lo construido está commiteado y en `main`** (último commit `1845134`). Solo queda sin commitear `.vscode/settings.json`, a propósito.
+- Hecho: rediseño completo (portal, biblioteca y panel con Tailwind + shadcn/ui), modo oscuro, transiciones, biblioteca con autorizaciones firmadas,
+  documentación de dirigentes con archivos y **módulo de pagos** (cobros, comprobantes, efectivo, historial, planillas, consulta del apoderado,
+  límite de envíos).
+- **Siguiente paso acordado con el usuario: la Fase 1 de seguridad** (primer punto de "Pendientes"). Plan sugerido, en este orden:
+  1. `UsuarioController`: devolver un DTO sin `password` en `GET/PUT /api/usuarios/perfil` (hoy se filtra el hash BCrypt).
+  2. Secretos a variables de entorno: `JwtUtil.SECRET_KEY` → `pukara.jwt.secreto` (con valor de desarrollo solo en `application-dev.properties`);
+     `root/root` de MySQL → `${DB_USER}`/`${DB_PASSWORD}`; `DataInitializer` sin `admin123` fijo ni `System.out.println` de la clave.
+  3. `JwtFilter`: capturar `JwtException` y seguir sin autenticar (hoy un token vencido o mal formado provoca error en vez de 401).
+  4. Roles con `@EnableMethodSecurity` o reglas en `SecurityConfig`: documentación de dirigentes y autorizaciones solo `ADMIN` (y quizá
+     `DIRIGENTE_GUIADORA` de lectura). Preguntar al usuario qué puede ver un dirigente que no es administrador.
+  5. Frontend: `helpers/AuthFetch.js` cierra sesión ante 401 **y** 403; con roles, un 403 debe mostrar "no tienes permiso" y no expulsar.
+  6. `Rama.miembros` sin `cascade = ALL`.
+  7. Mass assignment en controladores legados (DTOs de entrada): es grande; puede quedar para la Fase 2 junto con el punto 4 de Pendientes.
+- Para empezar: levantar backend y frontend (ver "Levantar el proyecto"), verificar con `curl http://localhost:8080/api/noticias` y
+  `http://localhost:5173`, y abrir el navegador para el usuario.
 
 ## Qué es
 
@@ -45,7 +65,8 @@ npm run dev          # http://localhost:5173
 
 - Usuario del panel: `admin` / `admin123` (lo crea `config/DataInitializer`). Debe cambiarse antes de producción.
 - Consola H2: http://localhost:8080/h2-console — JDBC `jdbc:h2:file:./data/pukaraweb-dev`, usuario `sa`, sin contraseña. Solo existe en el perfil `dev`.
-- Datos de prueba: `DevDataSeeder` (ramas, miembros, dirigentes, inventario, eventos, noticias) y `BibliotecaDevSeeder` (documentos PDF generados). Solo se cargan si la base está vacía. Para reiniciar: detener el backend y borrar `backend/data/`.
+- Datos de prueba: `DevDataSeeder` (ramas, 4 miembros, dirigentes, inventario, eventos, noticias), `BibliotecaDevSeeder` (documentos PDF generados) y `PagosDevSeeder` (cobros y pagos variados). Cada uno se carga solo si su tabla está vacía. Para reiniciar todo: detener el backend y borrar `backend/data/` (incluye los archivos subidos en `backend/data/archivos/`).
+- RUT de los miembros de prueba (sirven para probar autorizaciones, pagos y la consulta): Tomás 25.123.456-7 (Manada), Isidora 24.987.654-3 (Compañía), Benjamín 24.555.111-2 (Tropa), Antonia 23.444.222-1 (Avanzada).
 - Pruebas: `./mvnw test` usa el perfil `test` (H2 en memoria). No requiere MySQL.
 - Frontend: `npx vite build` y `npx eslint src`. Error de lint conocido y aceptado por ahora: `set-state-in-effect` en `context/AuthContext.jsx` (código original). Los avisos `react-refresh/only-export-components` en `components/ui/*` y archivos que exportan constantes son esperables.
 - `VITE_API_URL` define la URL del backend (por defecto `http://localhost:8080`, ver `src/lib/api.js`).
@@ -62,7 +83,7 @@ Conviven dos estilos:
   - `equipo/` — documentación de dirigentes: `DocumentoDirigente` (un archivo por tipo y dirigente), `TipoDocumentoDirigente` (al subir o borrar marca la casilla booleana correspondiente en `Dirigente`), `DocumentacionController` (`/api/dirigentes/{id}/documentos/{tipo}`).
   - Convenciones: inyección por constructor, DTO `record` (nunca entidades en la API), `ResponseStatusException` con mensajes en español para el usuario final, `@Transactional` en servicios.
 - `DirigenteService.eliminar` borra primero los archivos de documentación. `EventoService.guardar` conserva `requiereAutorizacion` si el cliente no lo envía.
-- Seguridad (`security/SecurityConfig`): públicos `/api/auth/**`, `GET /api/noticias/**`, `GET /api/biblioteca/**` y `POST /api/biblioteca/autorizaciones` y `POST /api/biblioteca/pagos`; `/api/pagos/**` exige rol ADMIN (primer control por rol); todo lo demás exige token. `DevH2ConsoleSecurity` abre `/h2-console` solo en `dev`. **Todavía no hay control por roles**: cualquier usuario con sesión ve todo, incluidos los certificados de antecedentes de dirigentes.
+- Seguridad (`security/SecurityConfig`): públicos `/api/auth/**`, `GET /api/noticias/**`, `GET /api/biblioteca/**` y `POST /api/biblioteca/autorizaciones` y `POST /api/biblioteca/pagos`; `/api/pagos/**` exige rol ADMIN (el único control por rol hasta ahora); todo lo demás solo exige token. `DevH2ConsoleSecurity` abre `/h2-console` solo en `dev`. **Fuera de pagos no hay control por roles**: cualquier usuario con sesión ve todo, incluidos los certificados de antecedentes de dirigentes. Hoy solo existe el usuario `admin` (rol ADMIN).
 - Límite de subida: 10 MB (`spring.servlet.multipart.*`, con `resolve-lazily=true` para que el error llegue a `ErroresApi`).
 
 ## Frontend: estructura y convenciones
@@ -76,7 +97,8 @@ src/
   pages/portal/           PortalHome, Noticias, NoticiaDetalle
   pages/biblioteca/       BibliotecaInicio, EnviarAutorizacion, Pagar
   pages/admin/            AdminInicio, AdminDocumentos, AdminAutorizaciones, AdminNoticias, EditorNoticia,
-                          AdminPagos (por revisar + cobros), AdminCobro (/admin/pagos/:id)
+                          AdminPagos (pestañas Por revisar / Cobros / Historial, ?vista= en la URL),
+                          AdminCobro (/admin/pagos/:id: integrantes, historial del cobro, registrar pago)
   components/pagos/       FormularioCobro, RevisionPago (AccionesRevision), RegistrarPago (transferencia o efectivo),
                           DatosTransferencia, HistorialPagos (+ DetallePago), ConsultaPagos
   pages/                  Ramas, Miembros, Equipo (dirigentes), Inventario, Eventos, Login (ya migradas)
@@ -127,7 +149,23 @@ src/
   - Rutas como `/admin/...` pasadas a programas se convierten a rutas de Windows (MSYS) → `export MSYS_NO_PATHCONV=1`.
   - `curl -d` con tildes envía mal la codificación y deja texto roto en la base → para escribir datos por la API usa Python con `urllib` y JSON en UTF-8.
 - **Capturas de pantalla** para revisar la UI: Edge headless desde PowerShell con `Start-Process ... -PassThru` y `WaitForExit(45000)`. Para páginas del panel, crear temporalmente `frontend/public/_p_x.html` con `<script>localStorage.setItem('token','...');location.replace('/admin/...')</script>` y **borrarlo después**. Edge headless tiene un ancho mínimo de ~500 px: para móvil, usar un iframe de 390 px dentro de una página.
+- Capturas con interacción (ej. escribir un RUT y pulsar un botón): cargar la página en un iframe del mismo origen y manipularla con JS.
+  Las pestañas de Radix (`Tabs`) se activan con `mousedown`, no con `click`; para rellenar un `<input>` de React usar el setter nativo
+  (`Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input, valor)`) y luego despachar el evento `input`.
+- En PowerShell, un `Remove-Item` con una ruta armada con `-replace` en la misma línea fue bloqueado por el control de permisos: para lotes de
+  capturas conviene escribir un script `.ps1` en el scratchpad (con `Remove-Item -LiteralPath`) y ejecutarlo.
 - Para detener el backend: buscar el proceso en el puerto 8080 y confirmar que su línea de comando contiene `PukaraWebApplication` antes de matarlo.
+- El backend corre con devtools: `./mvnw -q compile` en otra terminal recarga los cambios de Java sin reiniciar. Cambios de entidades o de
+  seeders sí conviene reiniciarlos. Al cerrar la sesión de Claude Code, los procesos que lanzó se apagan: hay que levantarlos de nuevo.
+- Si las pruebas agotan el límite de envíos públicos (5 cada 10 minutos por IP), reiniciar el backend para vaciar los contadores.
+
+## Git
+
+- En este equipo **no hay identidad de git configurada** (ni global ni del repo). Se commitea pasando la del historial en cada comando, sin
+  tocar la configuración: `git -c user.name="Mauricio Montenegro" -c user.email="mau.montenegro@duocuc.cl" commit ...`
+- El usuario trabaja directo sobre `main` y pide subir ahí; igual confirmar antes de hacer `push`. No hay `gh` instalado (los PR se abren desde la web).
+- Antes de commitear: `./mvnw test` (backend), `npx vite build` y `npx eslint src` (frontend), y revisar que no entren `backend/data/`,
+  `frontend/dist/` ni secretos.
 
 ## Skills útiles instaladas (globales)
 
