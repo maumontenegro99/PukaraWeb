@@ -5,7 +5,7 @@ releer el historial ni recorrer todo el repositorio. Abre solo los archivos que 
 
 ## Retomar aquí (estado al 24-09-2026)
 
-- **Todo lo construido está commiteado y en `main`** (último commit `1845134`). Solo queda sin commitear `.vscode/settings.json`, a propósito.
+- **Todo lo construido está commiteado y en `main`** (el código del módulo de pagos quedó en `4442b76`; `git log` muestra lo más reciente). Solo queda sin commitear `.vscode/settings.json`, a propósito.
 - Hecho: rediseño completo (portal, biblioteca y panel con Tailwind + shadcn/ui), modo oscuro, transiciones, biblioteca con autorizaciones firmadas,
   documentación de dirigentes con archivos y **módulo de pagos** (cobros, comprobantes, efectivo, historial, planillas, consulta del apoderado,
   límite de envíos).
