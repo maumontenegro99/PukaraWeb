@@ -46,6 +46,11 @@ public class SecurityConfig {
                 // ✅ ZONA PÚBLICA: Biblioteca (ver y descargar documentos, enviar autorizaciones firmadas)
                 .requestMatchers(HttpMethod.GET, "/api/biblioteca/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/biblioteca/autorizaciones").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/biblioteca/pagos").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/biblioteca/pagos/consulta").permitAll()
+
+                // 🔒 SOLO ADMINISTRACIÓN: pagos (confirmar transferencias, ver comprobantes, crear cobros)
+                .requestMatchers("/api/pagos/**").hasRole("ADMIN")
 
                 // 🔒 ZONA PRIVADA: Todo lo demás requiere Token (Crear noticias, inventario, miembros, etc.)
                 .anyRequest().authenticated()

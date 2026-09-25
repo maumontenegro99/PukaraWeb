@@ -10,6 +10,7 @@ const DESCRIPCIONES = {
   '/admin/equipo': 'Dirigentes, cargos y documentación al día.',
   '/admin/inventario': 'Carpas, ollas y materiales: qué hay y dónde está.',
   '/admin/eventos': 'Reuniones, salidas y campamentos del calendario.',
+  '/admin/pagos': 'Cuotas y campamentos: quién pagó y qué comprobantes faltan revisar.',
   '/admin/noticias': 'Lo que ven las familias en el sitio público.',
   '/admin/biblioteca': 'Manuales y formularios de la biblioteca pública.',
   '/admin/autorizaciones': 'Quién autorizó cada campamento y quién falta.',

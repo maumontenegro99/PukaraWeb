@@ -88,7 +88,7 @@ public class BibliotecaDevSeeder implements CommandLineRunner {
     }
 
     // PDF mínimo de una página con líneas de texto (Helvetica). Solo para datos de prueba.
-    static byte[] pdfSimple(String... lineas) {
+    public static byte[] pdfSimple(String... lineas) {
         StringBuilder texto = new StringBuilder("BT /F1 13 Tf 72 760 Td 18 TL\n");
         for (String linea : lineas) {
             texto.append('(').append(linea.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")).append(") Tj T*\n");

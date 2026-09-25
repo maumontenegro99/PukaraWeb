@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DownloadIcon, EyeIcon, FileSignatureIcon, LibraryIcon, SearchIcon, ServerCrashIcon } from 'lucide-react';
+import { DownloadIcon, EyeIcon, FileSignatureIcon, LibraryIcon, SearchIcon, ServerCrashIcon, WalletIcon } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -220,6 +220,14 @@ export default function BibliotecaInicio() {
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
           <AvisoCampamentos />
+          <aside className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+            <WalletIcon className="size-6 text-celeste-ink" />
+            <h2 className="text-lg font-bold leading-tight">¿Tienes que pagar una cuota o un campamento?</h2>
+            <p className="text-sm text-muted-foreground">Transfiere al grupo y envía el comprobante desde aquí.</p>
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/biblioteca/pagos">Ir a pagos</Link>
+            </Button>
+          </aside>
         </div>
       </div>
     </div>

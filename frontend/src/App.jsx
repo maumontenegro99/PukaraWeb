@@ -12,6 +12,7 @@ import NoticiaDetalle from './pages/portal/NoticiaDetalle';
 import Login from './pages/Login';
 import BibliotecaInicio from './pages/biblioteca/BibliotecaInicio';
 import EnviarAutorizacion from './pages/biblioteca/EnviarAutorizacion';
+import Pagar from './pages/biblioteca/Pagar';
 
 import AdminInicio from './pages/admin/AdminInicio';
 import AdminDocumentos from './pages/admin/AdminDocumentos';
@@ -23,6 +24,8 @@ import Eventos from './pages/Eventos';
 import Equipo from './pages/Equipo';
 import AdminNoticias from './pages/admin/AdminNoticias';
 import EditorNoticia from './pages/admin/EditorNoticia';
+import AdminPagos from './pages/admin/AdminPagos';
+import AdminCobro from './pages/admin/AdminCobro';
 
 // Protege el panel: sin sesión, manda al login y recuerda a dónde se quería ir.
 const PrivateRoute = ({ children }) => {
@@ -51,6 +54,7 @@ function App() {
             <Route path="/biblioteca" element={<BibliotecaLayout />}>
               <Route index element={<BibliotecaInicio />} />
               <Route path="autorizaciones" element={<EnviarAutorizacion />} />
+              <Route path="pagos" element={<Pagar />} />
             </Route>
 
             <Route path="/login" element={<Login />} />
@@ -75,6 +79,8 @@ function App() {
               <Route path="noticias/:id" element={<EditorNoticia />} />
               <Route path="biblioteca" element={<AdminDocumentos />} />
               <Route path="autorizaciones" element={<AdminAutorizaciones />} />
+              <Route path="pagos" element={<AdminPagos />} />
+              <Route path="pagos/:id" element={<AdminCobro />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

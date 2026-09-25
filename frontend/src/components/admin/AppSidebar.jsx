@@ -10,6 +10,7 @@ import {
   PackageIcon,
   UserCogIcon,
   UsersIcon,
+  WalletIcon,
 } from 'lucide-react';
 
 import {
@@ -43,6 +44,10 @@ export const SECCIONES = [
       { to: '/admin/inventario', label: 'Inventario', icon: PackageIcon },
       { to: '/admin/eventos', label: 'Eventos', icon: CalendarDaysIcon },
     ],
+  },
+  {
+    titulo: 'Finanzas',
+    items: [{ to: '/admin/pagos', label: 'Pagos', icon: WalletIcon }],
   },
   {
     titulo: 'Comunicación',

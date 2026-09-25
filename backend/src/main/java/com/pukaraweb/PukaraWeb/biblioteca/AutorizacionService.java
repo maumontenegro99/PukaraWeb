@@ -18,6 +18,7 @@ import com.pukaraweb.PukaraWeb.biblioteca.BibliotecaDtos.AutorizacionRecibidaDto
 import com.pukaraweb.PukaraWeb.biblioteca.BibliotecaDtos.EstadoIntegranteDto;
 import com.pukaraweb.PukaraWeb.biblioteca.BibliotecaDtos.RamaResumen;
 import com.pukaraweb.PukaraWeb.comun.AlmacenArchivos;
+import com.pukaraweb.PukaraWeb.comun.Rut;
 import com.pukaraweb.PukaraWeb.model.Evento;
 import com.pukaraweb.PukaraWeb.model.Miembro;
 import com.pukaraweb.PukaraWeb.model.Rama;
@@ -56,9 +57,8 @@ public class AutorizacionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe tu nombre como apoderado.");
         }
 
-        String rut = normalizarRut(rutMiembro);
         Miembro miembro = convocados(evento).stream()
-                .filter(m -> rut.length() > 1 && rut.equals(normalizarRut(m.getDocumentoIdentidad())))
+                .filter(m -> Rut.iguales(rutMiembro, m.getDocumentoIdentidad()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                         "El RUT no coincide con ningún integrante inscrito en este campamento. Revísalo o consulta a su dirigente."));
@@ -128,10 +128,5 @@ public class AutorizacionService {
             return miembroRepository.findAll();
         }
         return miembroRepository.findByRamaIdIn(evento.getRamas().stream().map(Rama::getId).filter(Objects::nonNull).toList());
-    }
-
-    // "12.345.678-k" y "12345678K" son el mismo RUT.
-    static String normalizarRut(String rut) {
-        return rut == null ? "" : rut.replaceAll("[^0-9kK]", "").toUpperCase();
     }
 }

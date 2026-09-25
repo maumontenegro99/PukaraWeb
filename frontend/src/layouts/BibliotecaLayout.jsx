@@ -15,6 +15,7 @@ import insignia from '@/assets/insignia.png';
 const ENLACES = [
   { to: '/biblioteca', label: 'Documentos', end: true },
   { to: '/biblioteca/autorizaciones', label: 'Enviar autorización' },
+  { to: '/biblioteca/pagos', label: 'Pagos' },
 ];
 
 function EnlacesNav({ className, claro = false }) {
