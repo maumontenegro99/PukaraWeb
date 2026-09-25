@@ -26,8 +26,8 @@ Mi intención es facilitar las tareas administrativas y logísticas que, aunque 
 | | Para quién | Qué ofrece |
 |---|---|---|
 | **📰 Portal** | Familias, interesados y otros grupos | Noticias y avisos del grupo, las seis ramas con sus edades y cómo sumarse |
-| **📚 Biblioteca** | Todos, sin necesidad de cuenta | Manuales de rama, formularios y reglamentos para descargar, y el envío de autorizaciones firmadas para campamentos |
-| **🏕️ Panel del grupo** | Dirigentes y administración | Miembros, ramas, dirigentes, inventario, eventos, noticias, documentos y autorizaciones |
+| **📚 Biblioteca** | Todos, sin necesidad de cuenta | Manuales de rama, formularios y reglamentos para descargar, autorizaciones firmadas para campamentos y comprobantes de pago |
+| **🏕️ Panel del grupo** | Dirigentes y administración | Miembros, ramas, dirigentes, inventario, eventos, pagos, noticias, documentos y autorizaciones |
 
 Los tres están conectados: lo que se publica en el panel aparece en el portal y en la biblioteca, y las autorizaciones que suben los apoderados llegan directo al panel, donde solo los dirigentes pueden verlas.
 
@@ -48,6 +48,7 @@ Los tres están conectados: lo que se publica en el panel aparece en el portal y
   2. Lo firma a mano.
   3. Lo sube escaneado o fotografiado junto al RUT de su hija o hijo.
 - El sistema verifica que el RUT corresponda a un integrante inscrito en ese campamento y revisa que el archivo sea realmente un PDF o una imagen.
+- **Pagos**: las familias ven los cobros abiertos y los datos de transferencia del grupo, envían el comprobante junto al RUT de su hija o hijo y pueden consultar cuánto llevan pagado.
 
 ### 🏕️ Panel del grupo
 
@@ -60,6 +61,7 @@ Los tres están conectados: lo que se publica en el panel aparece en el portal y
 - **Eventos**: agenda por mes, ramas participantes, costo y si se pide autorización a los apoderados.
 - **Noticias y documentos**: publicación y edición con vista previa de cómo se verá en el portal.
 - **Autorizaciones**: quién ya envió la autorización firmada de cada campamento, quién falta, y aprobación o rechazo con el motivo.
+- **Pagos**: cobros de campamentos, cuotas o personalizados; quién pagó, quién tiene abonos y quién falta. Un administrador confirma cada transferencia revisando el comprobante, que se elimina apenas se confirma o rechaza. También registra pagos en efectivo, y el historial completo se descarga como planilla.
 
 ### 🌗 Modo oscuro
 
@@ -152,7 +154,7 @@ PukaraWeb/
 - [x] Rediseño con identidad propia, modo oscuro y diseño adaptable a celular
 - [ ] Seguridad antes de publicar: roles de usuario, credenciales fuera del código y protección de datos personales
 - [ ] Imágenes de noticias en almacenamiento de archivos
-- [ ] Pagos de cuotas y campamentos
+- [x] Pagos por transferencia con confirmación de un administrador
 - [ ] Despliegue en producción
 
 ---
