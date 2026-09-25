@@ -11,9 +11,9 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 
-// Errores de los módulos biblioteca, equipo y pagos en formato ProblemDetail (RFC 9457), respondidos directamente para que las rutas
+// Errores de los módulos biblioteca, equipo, pagos y de los controladores legados en formato ProblemDetail (RFC 9457), respondidos directamente para que las rutas
 // públicas no terminen en /error (que exige sesión) y el mensaje llegue legible al frontend.
-@RestControllerAdvice(basePackages = { "com.pukaraweb.PukaraWeb.biblioteca", "com.pukaraweb.PukaraWeb.equipo",
+@RestControllerAdvice(basePackages = { "com.pukaraweb.PukaraWeb.controller", "com.pukaraweb.PukaraWeb.biblioteca", "com.pukaraweb.PukaraWeb.equipo",
         "com.pukaraweb.PukaraWeb.pagos" })
 public class ErroresApi {
 

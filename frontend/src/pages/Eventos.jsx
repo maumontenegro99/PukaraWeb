@@ -41,6 +41,7 @@ import { RamaBadge, colorDeRama } from '@/components/admin/RamaBadge';
 import { NINGUNA, NUEVA, SelectConNuevo } from '@/components/admin/SelectConNuevo';
 import { RAMAS } from '@/lib/ramas';
 import { api, incluye, useDatosPanel } from '@/lib/panel';
+import { usePerfil } from '@/context/PerfilContext';
 
 // Deben coincidir con TipoEvento en el backend.
 const TIPOS = [
@@ -68,6 +69,7 @@ function horario(inicio, fin) {
 }
 
 function FormularioEvento({ abierto, onCambio, evento, ramas, ubicaciones, onGuardado }) {
+  const { esAdmin } = usePerfil();
   const [form, setForm] = useState(VACIO);
   const [nuevaUbicacion, setNuevaUbicacion] = useState({ nombre: '', direccion: '' });
   const [guardando, setGuardando] = useState(false);
@@ -241,13 +243,16 @@ function FormularioEvento({ abierto, onCambio, evento, ramas, ubicaciones, onGua
             <div className="flex items-start gap-3 rounded-lg border p-4">
               <Switch
                 id="evento-autorizacion"
+                disabled={!esAdmin}
                 checked={form.requiereAutorizacion}
                 onCheckedChange={(v) => setForm((f) => ({ ...f, requiereAutorizacion: v }))}
               />
               <div className="flex flex-col gap-1">
                 <Label htmlFor="evento-autorizacion">Pedir autorización a los apoderados</Label>
                 <p className="text-sm text-muted-foreground">
-                  Aparecerá en la biblioteca para que suban el formulario firmado. Publica el formulario en Biblioteca, Documentos.
+                  {esAdmin
+                    ? 'Aparecerá en la biblioteca para que suban el formulario firmado. Publica el formulario en Biblioteca, Documentos.'
+                    : 'Solo un administrador del grupo puede cambiar esta opción.'}
                 </p>
               </div>
             </div>

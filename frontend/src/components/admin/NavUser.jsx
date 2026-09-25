@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronsUpDownIcon, LogOutIcon, UserRoundIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,8 +27,8 @@ import {
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { authFetch } from '@/helpers/AuthFetch';
-import { apiUrl } from '@/lib/api';
+import { usePerfil } from '@/context/PerfilContext';
+import { api } from '@/lib/panel';
 
 const ROLES = { ADMIN: 'Administración', DIRIGENTE_GUIADORA: 'Dirigente', APODERADO: 'Apoderado' };
 
@@ -44,17 +45,11 @@ export function NavUser() {
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
 
-  const [usuario, setUsuario] = useState({ nombreCompleto: '', username: '', rol: '' });
+  const { perfil, setPerfil } = usePerfil();
+  const usuario = perfil ?? { nombreCompleto: '', username: '', rol: '' };
   const [perfilAbierto, setPerfilAbierto] = useState(false);
   const [form, setForm] = useState({ nombreCompleto: '', password: '' });
   const [guardando, setGuardando] = useState(false);
-
-  useEffect(() => {
-    authFetch(apiUrl('/api/usuarios/perfil'))
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setUsuario(data))
-      .catch(() => {});
-  }, []);
 
   const abrirPerfil = () => {
     setForm({ nombreCompleto: usuario.nombreCompleto ?? '', password: '' });
@@ -65,14 +60,11 @@ export function NavUser() {
     e.preventDefault();
     setGuardando(true);
     try {
-      const res = await authFetch(apiUrl('/api/usuarios/perfil'), {
-        method: 'PUT',
-        body: JSON.stringify(form),
-      });
-      if (res.ok) {
-        setUsuario(await res.json());
-        setPerfilAbierto(false);
-      }
+      setPerfil(await api('/api/usuarios/perfil', { method: 'PUT', body: form }));
+      setPerfilAbierto(false);
+      toast.success('Perfil actualizado');
+    } catch (err) {
+      toast.error(err.message);
     } finally {
       setGuardando(false);
     }
@@ -152,7 +144,7 @@ export function NavUser() {
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
-                <FieldDescription>Déjala vacía para mantener la actual.</FieldDescription>
+                <FieldDescription>Mínimo 8 caracteres. Déjala vacía para mantener la actual.</FieldDescription>
               </Field>
             </FieldGroup>
             <DialogFooter>

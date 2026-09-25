@@ -25,6 +25,7 @@ import { authFetch } from '@/helpers/AuthFetch';
 import { apiUrl } from '@/lib/api';
 import { ESTADOS_AUTORIZACION, formatearFechaCorta, formatearRango, mensajeDeError } from '@/lib/biblioteca';
 import { abrirArchivoProtegido } from '@/lib/panel';
+import { usePerfil } from '@/context/PerfilContext';
 
 const abrirArchivo = (autorizacionId) =>
   abrirArchivoProtegido(`/api/autorizaciones/${autorizacionId}/archivo`).catch((err) => toast.error(err.message));
@@ -36,6 +37,7 @@ function EstadoBadge({ autorizacion }) {
 }
 
 export default function AdminAutorizaciones() {
+  const { esAdmin } = usePerfil();
   const [eventos, setEventos] = useState([]);
   const [eventoId, setEventoId] = useState('');
   const [datosFilas, setDatosFilas] = useState({ eventoId: null, filas: [] });
@@ -84,7 +86,7 @@ export default function AdminAutorizaciones() {
       method: 'PUT',
       body: JSON.stringify({ requiere }),
     });
-    if (!res.ok) return toast.error('No se pudo cambiar la configuración del evento.');
+    if (!res.ok) return toast.error(await mensajeDeError(res, 'No se pudo cambiar la configuración del evento.'));
     setEventos((lista) => lista.map((e) => (String(e.id) === eventoId ? { ...e, requiereAutorizacion: requiere } : e)));
     toast.success(requiere ? 'Los apoderados ya pueden enviar su autorización' : 'El evento dejó de recibir autorizaciones');
   };
@@ -143,9 +145,15 @@ export default function AdminAutorizaciones() {
               {evento && <FieldDescription>{formatearRango(evento.fechaInicio, evento.fechaFin)}</FieldDescription>}
             </Field>
             <div className="flex items-center gap-3">
-              <Switch id="requiere" checked={!!evento?.requiereAutorizacion} onCheckedChange={cambiarRequiere} />
+              <Switch
+                id="requiere"
+                checked={!!evento?.requiereAutorizacion}
+                onCheckedChange={cambiarRequiere}
+                disabled={!esAdmin}
+              />
               <Label htmlFor="requiere" className="leading-snug">
                 Pedir autorización a los apoderados
+                {!esAdmin && <span className="font-normal text-muted-foreground"> (solo administración puede cambiarlo)</span>}
               </Label>
             </div>
           </div>
@@ -215,13 +223,13 @@ export default function AdminAutorizaciones() {
                               <EyeIcon data-icon="inline-start" />
                               Ver
                             </Button>
-                            {f.autorizacion.estado !== 'APROBADA' && (
+                            {esAdmin && f.autorizacion.estado !== 'APROBADA' && (
                               <Button variant="outline" size="sm" onClick={() => revisar(f, 'APROBADA')}>
                                 <CheckIcon data-icon="inline-start" />
                                 Aprobar
                               </Button>
                             )}
-                            {f.autorizacion.estado !== 'RECHAZADA' && (
+                            {esAdmin && f.autorizacion.estado !== 'RECHAZADA' && (
                               <Button variant="ghost" size="sm" onClick={() => setRechazo(f)}>
                                 <XIcon data-icon="inline-start" />
                                 Rechazar

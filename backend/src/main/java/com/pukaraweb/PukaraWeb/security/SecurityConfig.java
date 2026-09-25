@@ -26,6 +26,9 @@ public class SecurityConfig {
     @Autowired
     private JwtFilter jwtFilter;
 
+    @Autowired
+    private RespuestasSeguridad respuestas;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -52,8 +55,24 @@ public class SecurityConfig {
                 // 🔒 SOLO ADMINISTRACIÓN: pagos (confirmar transferencias, ver comprobantes, crear cobros)
                 .requestMatchers("/api/pagos/**").hasRole("ADMIN")
 
-                // 🔒 ZONA PRIVADA: Todo lo demás requiere Token (Crear noticias, inventario, miembros, etc.)
-                .anyRequest().authenticated()
+                // 🔒 SOLO ADMINISTRACIÓN: documentación de dirigentes (certificados de antecedentes y otros datos sensibles)
+                .requestMatchers("/api/dirigentes/*/documentos/**").hasRole("ADMIN")
+
+                // 🔒 Autorizaciones firmadas: los dirigentes pueden verlas y descargarlas; solo administración las cambia
+                .requestMatchers(HttpMethod.GET, "/api/autorizaciones/**").hasAnyRole("ADMIN", "DIRIGENTE_GUIADORA")
+                .requestMatchers("/api/autorizaciones/**").hasRole("ADMIN")
+
+                // 🔒 Mi perfil: cualquier usuario con sesión
+                .requestMatchers("/api/usuarios/perfil").authenticated()
+
+                // 🔒 ZONA PRIVADA: el resto del panel es para administración y dirigentes (un apoderado no entra al panel)
+                .anyRequest().hasAnyRole("ADMIN", "DIRIGENTE_GUIADORA")
+            )
+
+            // Sin sesión válida → 401; con sesión pero sin el rol → 403 (por defecto Spring respondería 403 en ambos casos)
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(respuestas.sinSesion())
+                .accessDeniedHandler(respuestas.sinPermiso())
             )
             
             // 4. No usar sesiones (Stateless)

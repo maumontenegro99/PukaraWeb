@@ -1,8 +1,12 @@
 package com.pukaraweb.PukaraWeb.controller;
 
+import com.pukaraweb.PukaraWeb.dto.PerfilDtos.ActualizarPerfil;
+import com.pukaraweb.PukaraWeb.dto.PerfilDtos.Perfil;
 import com.pukaraweb.PukaraWeb.model.Usuario;
 import com.pukaraweb.PukaraWeb.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,34 +14,42 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/usuarios")
-@CrossOrigin(origins = "http://localhost:5173")
 public class UsuarioController {
 
-    @Autowired
-    private UsuarioService usuarioService;
+    private static final int LARGO_MINIMO_CLAVE = 8;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UsuarioService usuarioService;
+    private final PasswordEncoder passwordEncoder;
 
-    // 1. OBTENER MI PERFIL (El token me dice quién soy)
-    @GetMapping("/perfil")
-    public Usuario getMiPerfil(@AuthenticationPrincipal UserDetails userDetails) {
-        // userDetails viene inyectado automáticamente gracias al Token
-        return (Usuario) usuarioService.loadUserByUsername(userDetails.getUsername());
+    public UsuarioController(UsuarioService usuarioService, PasswordEncoder passwordEncoder) {
+        this.usuarioService = usuarioService;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    // 2. ACTUALIZAR MI PERFIL
+    // Perfil de quien tiene la sesión (el token dice quién es).
+    @GetMapping("/perfil")
+    public Perfil getMiPerfil(@AuthenticationPrincipal UserDetails userDetails) {
+        return Perfil.de(usuarioActual(userDetails));
+    }
+
     @PutMapping("/perfil")
-    public Usuario updateMiPerfil(@AuthenticationPrincipal UserDetails userDetails, @RequestBody Usuario usuarioActualizado) {
-        Usuario usuario = (Usuario) usuarioService.loadUserByUsername(userDetails.getUsername());
-        
-        usuario.setNombreCompleto(usuarioActualizado.getNombreCompleto());
-        
-        // Solo cambiamos la contraseña si viene algo nuevo (y no está vacía)
-        if (usuarioActualizado.getPassword() != null && !usuarioActualizado.getPassword().isEmpty()) {
-            usuario.setPassword(passwordEncoder.encode(usuarioActualizado.getPassword()));
+    public ResponseEntity<?> updateMiPerfil(@AuthenticationPrincipal UserDetails userDetails, @RequestBody ActualizarPerfil cambios) {
+        Usuario usuario = usuarioActual(userDetails);
+
+        String clave = cambios.password();
+        if (clave != null && !clave.isEmpty()) {
+            if (clave.length() < LARGO_MINIMO_CLAVE) {
+                return ResponseEntity.badRequest().body(ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                        "La contraseña debe tener al menos " + LARGO_MINIMO_CLAVE + " caracteres."));
+            }
+            usuario.setPassword(passwordEncoder.encode(clave));
         }
-        
-        return usuarioService.save(usuario);
+        usuario.setNombreCompleto(cambios.nombreCompleto());
+
+        return ResponseEntity.ok(Perfil.de(usuarioService.save(usuario)));
+    }
+
+    private Usuario usuarioActual(UserDetails userDetails) {
+        return (Usuario) usuarioService.loadUserByUsername(userDetails.getUsername());
     }
 }

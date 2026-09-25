@@ -2,10 +2,10 @@
 export const authFetch = async (url, options = {}) => {
     // 1. Recuperamos el token del bolsillo
     const token = localStorage.getItem('token');
-    
+
     // 2. Preparamos las cabeceras (headers)
     const headers = options.headers || {};
-    
+
     if (token) {
         // Aquí es donde mostramos la credencial al Guardia del Backend
         headers['Authorization'] = `Bearer ${token}`;
@@ -20,11 +20,13 @@ export const authFetch = async (url, options = {}) => {
     // 3. Ejecutamos la petición original pero con las cabeceras nuevas
     const response = await fetch(url, { ...options, headers });
 
-    // 4. Medida de seguridad: Si el token venció (401 o 403), nos expulsa
-    if (response.status === 401 || response.status === 403) {
+    // 4. 401 = no hay sesión válida (token vencido o inválido): se cierra la sesión y se vuelve al login.
+    //    Un 403 (sesión válida sin permiso para esa acción) no expulsa: la respuesta sigue y quien llamó muestra
+    //    el mensaje del backend ("No tienes permiso…").
+    if (response.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login'; // Nos manda al login a la fuerza
-        return Promise.reject("Sesión expirada");
+        return Promise.reject(new Error('Tu sesión venció. Vuelve a iniciar sesión.'));
     }
 
     return response;

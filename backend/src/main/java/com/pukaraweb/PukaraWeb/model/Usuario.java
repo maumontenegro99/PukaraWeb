@@ -1,5 +1,6 @@
 package com.pukaraweb.PukaraWeb.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class Usuario implements UserDetails {
     @Column(unique = true, nullable = false)
     private String username; // Puede ser el RUT o un nombre de usuario
 
+    @JsonIgnore // Nunca sale en una respuesta JSON, aunque alguien exponga la entidad por error
     @Column(nullable = false)
     private String password; // Se guardará encriptada
 

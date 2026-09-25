@@ -5,20 +5,13 @@ releer el historial ni recorrer todo el repositorio. Abre solo los archivos que 
 
 ## Retomar aquí (estado al 24-09-2026)
 
-- **Todo lo construido está commiteado y en `main`** (el código del módulo de pagos quedó en `4442b76`; `git log` muestra lo más reciente). Solo queda sin commitear `.vscode/settings.json`, a propósito.
 - Hecho: rediseño completo (portal, biblioteca y panel con Tailwind + shadcn/ui), modo oscuro, transiciones, biblioteca con autorizaciones firmadas,
-  documentación de dirigentes con archivos y **módulo de pagos** (cobros, comprobantes, efectivo, historial, planillas, consulta del apoderado,
-  límite de envíos).
-- **Siguiente paso acordado con el usuario: la Fase 1 de seguridad** (primer punto de "Pendientes"). Plan sugerido, en este orden:
-  1. `UsuarioController`: devolver un DTO sin `password` en `GET/PUT /api/usuarios/perfil` (hoy se filtra el hash BCrypt).
-  2. Secretos a variables de entorno: `JwtUtil.SECRET_KEY` → `pukara.jwt.secreto` (con valor de desarrollo solo en `application-dev.properties`);
-     `root/root` de MySQL → `${DB_USER}`/`${DB_PASSWORD}`; `DataInitializer` sin `admin123` fijo ni `System.out.println` de la clave.
-  3. `JwtFilter`: capturar `JwtException` y seguir sin autenticar (hoy un token vencido o mal formado provoca error en vez de 401).
-  4. Roles con `@EnableMethodSecurity` o reglas en `SecurityConfig`: documentación de dirigentes y autorizaciones solo `ADMIN` (y quizá
-     `DIRIGENTE_GUIADORA` de lectura). Preguntar al usuario qué puede ver un dirigente que no es administrador.
-  5. Frontend: `helpers/AuthFetch.js` cierra sesión ante 401 **y** 403; con roles, un 403 debe mostrar "no tienes permiso" y no expulsar.
-  6. `Rama.miembros` sin `cascade = ALL`.
-  7. Mass assignment en controladores legados (DTOs de entrada): es grande; puede quedar para la Fase 2 junto con el punto 4 de Pendientes.
+  documentación de dirigentes con archivos, **módulo de pagos** y **Fase 1 de seguridad** (ver "Seguridad" en la sección del backend).
+- `git log` muestra lo más reciente. `.vscode/settings.json` queda sin commitear a propósito.
+- **Siguiente paso sugerido: la Fase 2 de seguridad** = mass assignment en los controladores legados (DTOs de entrada con `@Valid`, `PUT` para
+  editar), que coincide con el punto 4 de "Pendientes". Conviene hacerlo módulo por módulo (ramas, miembros, apoderados, dirigentes, eventos,
+  noticias...), con pruebas en `SeguridadTest` o una clase por módulo. Otros restos menores: `@CrossOrigin(origins = "*")` en varios
+  controladores legados (sobra: CORS ya está en `SecurityConfig`) y `spring.jpa.show-sql=true` en `application.properties`.
 - Para empezar: levantar backend y frontend (ver "Levantar el proyecto"), verificar con `curl http://localhost:8080/api/noticias` y
   `http://localhost:5173`, y abrir el navegador para el usuario.
 
@@ -36,7 +29,7 @@ Conexiones entre ellos: las noticias se publican en el panel y aparecen en el po
 
 **Pagos** (sin pasarela): un administrador crea cobros (evento, cuota o personalizado; para todo el grupo, algunas ramas o integrantes específicos). Las familias transfieren y envían el comprobante (imagen o PDF) desde `/biblioteca/pagos` con el RUT del niño → queda *en revisión* en `/admin/pagos`; el administrador también puede registrar un pago subiendo el pantallazo que le llegó por otro medio (queda confirmado de inmediato). **Al confirmar o rechazar, el comprobante se borra** (registro y archivo); queda solo el pago con monto, quién lo revisó y el motivo si se rechazó. Se admiten abonos: el estado de cada integrante (pagado, abono parcial, pendiente) se calcula sumando sus pagos confirmados. El administrador también registra pagos en **efectivo** (sin comprobante). En `/admin/pagos` hay pestañas *Por revisar*, *Cobros* e *Historial* (todos los pagos con filtros y total confirmado); el historial y el detalle de cada cobro se descargan como planilla CSV (`;` + BOM, se abre en Excel). El apoderado puede **consultar** con el RUT cómo va en cada cobro abierto (pestaña *Consultar mis pagos*), sin ver nombres.
 
-Decisiones ya tomadas por el usuario (no volver a preguntar): autorizaciones solo como PDF firmado (no aceptación digital); biblioteca abierta sin cuentas de apoderado; pagos por transferencia confirmados a mano con comprobante que se borra al revisarlo (lo pueden subir el apoderado o el administrador); botón "Biblioteca" en el encabezado del portal igual que el de acceso al panel; Tailwind + shadcn/ui para el frontend; H2 como base de desarrollo; modo oscuro en los tres servicios.
+Decisiones ya tomadas por el usuario (no volver a preguntar): autorizaciones solo como PDF firmado (no aceptación digital); biblioteca abierta sin cuentas de apoderado; pagos por transferencia confirmados a mano con comprobante que se borra al revisarlo (lo pueden subir el apoderado o el administrador); botón "Biblioteca" en el encabezado del portal igual que el de acceso al panel; Tailwind + shadcn/ui para el frontend; H2 como base de desarrollo; modo oscuro en los tres servicios. Un dirigente que no es administrador ve y descarga autorizaciones, pero no las aprueba ni ve la documentación de otros dirigentes ni Pagos.
 
 ## Cómo trabajar con el usuario
 
@@ -63,11 +56,16 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-- Usuario del panel: `admin` / `admin123` (lo crea `config/DataInitializer`). Debe cambiarse antes de producción.
+- Usuarios del panel (solo perfil `dev`): `admin` / `admin123` (lo crea `config/DataInitializer` con `pukara.admin.clave-inicial`) y
+  `dirigente` / `dirigente123` con rol `DIRIGENTE_GUIADORA` (lo crea `config/UsuariosDevSeeder`, aunque la base ya tenga datos).
 - Consola H2: http://localhost:8080/h2-console — JDBC `jdbc:h2:file:./data/pukaraweb-dev`, usuario `sa`, sin contraseña. Solo existe en el perfil `dev`.
 - Datos de prueba: `DevDataSeeder` (ramas, 4 miembros, dirigentes, inventario, eventos, noticias), `BibliotecaDevSeeder` (documentos PDF generados) y `PagosDevSeeder` (cobros y pagos variados). Cada uno se carga solo si su tabla está vacía. Para reiniciar todo: detener el backend y borrar `backend/data/` (incluye los archivos subidos en `backend/data/archivos/`).
 - RUT de los miembros de prueba (sirven para probar autorizaciones, pagos y la consulta): Tomás 25.123.456-7 (Manada), Isidora 24.987.654-3 (Compañía), Benjamín 24.555.111-2 (Tropa), Antonia 23.444.222-1 (Avanzada).
-- Pruebas: `./mvnw test` usa el perfil `test` (H2 en memoria). No requiere MySQL.
+- Pruebas: `./mvnw test` usa el perfil `test` (H2 en memoria). No requiere MySQL. `SeguridadTest` (MockMvc) cubre 401/403 por rol,
+  perfil sin contraseña, tokens vencidos o mal firmados y borrar una rama con miembros.
+- Secretos: `application.properties` lee `DB_USER`, `DB_PASSWORD`, `JWT_SECRETO` (mínimo 32 caracteres; sin ella no arranca) y
+  `ADMIN_CLAVE_INICIAL` (opcional; sin ella no se crea `admin`). `application-dev.properties` y `application-test.properties` traen valores
+  de desarrollo. Cambiar la clave JWT invalida las sesiones abiertas.
 - Frontend: `npx vite build` y `npx eslint src`. Error de lint conocido y aceptado por ahora: `set-state-in-effect` en `context/AuthContext.jsx` (código original). Los avisos `react-refresh/only-export-components` en `components/ui/*` y archivos que exportan constantes son esperables.
 - `VITE_API_URL` define la URL del backend (por defecto `http://localhost:8080`, ver `src/lib/api.js`).
 
@@ -83,7 +81,18 @@ Conviven dos estilos:
   - `equipo/` — documentación de dirigentes: `DocumentoDirigente` (un archivo por tipo y dirigente), `TipoDocumentoDirigente` (al subir o borrar marca la casilla booleana correspondiente en `Dirigente`), `DocumentacionController` (`/api/dirigentes/{id}/documentos/{tipo}`).
   - Convenciones: inyección por constructor, DTO `record` (nunca entidades en la API), `ResponseStatusException` con mensajes en español para el usuario final, `@Transactional` en servicios.
 - `DirigenteService.eliminar` borra primero los archivos de documentación. `EventoService.guardar` conserva `requiereAutorizacion` si el cliente no lo envía.
-- Seguridad (`security/SecurityConfig`): públicos `/api/auth/**`, `GET /api/noticias/**`, `GET /api/biblioteca/**` y `POST /api/biblioteca/autorizaciones` y `POST /api/biblioteca/pagos`; `/api/pagos/**` exige rol ADMIN (el único control por rol hasta ahora); todo lo demás solo exige token. `DevH2ConsoleSecurity` abre `/h2-console` solo en `dev`. **Fuera de pagos no hay control por roles**: cualquier usuario con sesión ve todo, incluidos los certificados de antecedentes de dirigentes. Hoy solo existe el usuario `admin` (rol ADMIN).
+- Seguridad (`security/SecurityConfig`), decidido con el usuario:
+  - Públicos: `/api/auth/**`, `GET /api/noticias/**`, `GET /api/biblioteca/**`, `POST /api/biblioteca/autorizaciones`, `POST /api/biblioteca/pagos`
+    y `/pagos/consulta`.
+  - Solo `ADMIN`: `/api/pagos/**`, `/api/dirigentes/*/documentos/**` (documentación de dirigentes) y todo cambio en `/api/autorizaciones/**`.
+    `EventoController` ignora `requiereAutorizacion` si quien guarda no es ADMIN.
+  - `ADMIN` y `DIRIGENTE_GUIADORA`: `GET /api/autorizaciones/**` (ver y descargar) y el resto del panel. `APODERADO` solo puede ver su perfil.
+  - `/api/usuarios/perfil` devuelve `PerfilDtos.Perfil` (sin contraseña; además `Usuario.password` tiene `@JsonIgnore`); el `PUT` exige 8+ caracteres.
+  - `RespuestasSeguridad`: sin sesión válida → **401**, sin permiso → **403**, ambos `ProblemDetail` en español. Login fallido → 401.
+    `JwtFilter` captura tokens vencidos, mal formados o de usuarios borrados y sigue sin autenticar.
+  - `DevH2ConsoleSecurity` abre `/h2-console` solo en `dev`.
+- `ErroresApi` también cubre los controladores legados (paquete `controller`). `RamaService.eliminar` responde 409 si la rama tiene miembros
+  (`Rama.miembros` ya no tiene cascada).
 - Límite de subida: 10 MB (`spring.servlet.multipart.*`, con `resolve-lazily=true` para que el error llegue a `ErroresApi`).
 
 ## Frontend: estructura y convenciones
@@ -106,13 +115,17 @@ src/
   components/admin/       AppSidebar, NavUser, Encabezado, RamaBadge, ConfirmarEliminar, SelectConNuevo,
                           DocumentacionDirigente
   components/brand/       Banderines, BanderinRama, FondoFacetado
-  context/                AuthContext (token en localStorage), TemaContext (claro/oscuro/sistema)
+  context/                AuthContext (token en localStorage), TemaContext (claro/oscuro/sistema),
+                          PerfilContext (perfil y `esAdmin` del panel; lo provee AdminLayout)
   lib/                    api.js, panel.js (api(), useDatosPanel(), abrirArchivoProtegido(), calcularEdad, incluye),
                           biblioteca.js, documentacion.js, pagos.js (formatearPesos, estados, descargarPlanilla), ramas.js, utils.js (cn)
 ```
 
 - Llamadas del panel: `api(ruta, { method, body })` de `lib/panel.js` (añade el token, acepta `FormData`, lanza `Error` con el `detail` del backend). Carga de varias rutas: `useDatosPanel({ clave: '/api/...' })` → `{ clave, estado, recargar }`.
 - Archivos protegidos (autorizaciones, documentos de dirigentes): `abrirArchivoProtegido(ruta)`.
+- Roles en el panel: `usePerfil().esAdmin` oculta lo que el rol no puede usar (ítems con `soloAdmin` en `SECCIONES` de `AppSidebar`,
+  `seccionesPara(esAdmin)`; rutas envueltas en `SoloAdmin`). Mientras carga el perfil se asume ADMIN para no parpadear; quien decide es el backend.
+  `helpers/AuthFetch.js` cierra la sesión solo ante 401; un 403 llega a quien llamó y `api()` lanza el `detail` ("No tienes permiso…").
 - Reglas de shadcn que se siguen: formularios con `FieldGroup`/`Field`, `gap-*` en vez de `space-*`, colores semánticos (`bg-primary`, `text-muted-foreground`), íconos en botones con `data-icon`, diálogos siempre con título, `Empty`/`Alert`/`Skeleton`/`Badge` en vez de markup propio, notificaciones con `toast` de sonner.
 - Textos de la interfaz en español, voz activa, sin emojis como íconos, errores que dicen qué pasó y qué hacer.
 - ESLint marca como "sin uso" un componente recibido como parámetro desestructurado (`icon: Icon`); la solución usada es asignarlo a una constante con mayúscula dentro del cuerpo.
@@ -128,14 +141,7 @@ src/
 
 ## Pendientes (en orden sugerido)
 
-1. **Fase 1 de seguridad** (lo más urgente antes de publicar):
-   - `GET /api/usuarios/perfil` devuelve la entidad `Usuario` con el hash de la contraseña → usar un DTO.
-   - Aplicar roles (`ADMIN`, `DIRIGENTE_GUIADORA`, `APODERADO` ya existen en `Rol`): restringir documentación de dirigentes y autorizaciones.
-   - Sacar secretos del código: clave JWT en `JwtUtil`, `root/root` de MySQL, `admin/admin123` (y que no se imprima en consola).
-   - Mass assignment: las entidades legadas reciben JSON directo y `POST` con `id` sobrescribe.
-   - `Rama.miembros` tiene `cascade = ALL` (borrar una rama borra sus miembros).
-   - `JwtFilter` lanza excepción con tokens vencidos o mal formados en vez de responder 401.
-   - `AuthFetch` cierra la sesión ante cualquier 403: con roles, un dirigente sin permiso en Pagos sería expulsado → distinguir 401 de 403.
+1. **Fase 2 de seguridad**: mass assignment (las entidades legadas reciben JSON directo y `POST` con `id` sobrescribe) → DTOs de entrada.
 2. Mensajes claros al borrar registros con dependencias (evento con autorizaciones o cobros, miembro con autorizaciones o pagos): hoy responde un error genérico.
 3. Imágenes de noticias: hoy van en base64 dentro de la base (`Noticia.imagenUrl` LONGTEXT) → moverlas a `AlmacenArchivos`.
 4. Migrar el backend legado al estilo por dominio (DTOs, validación con `@Valid`, `PUT` para editar) y eliminar `Adulto` e `Inventario`, que no se usan.

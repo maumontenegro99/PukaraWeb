@@ -5,7 +5,6 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -39,7 +38,7 @@ public class Rama {
 
     private String descripcion;
 
-    @OneToMany(mappedBy = "rama", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "rama") // Sin cascada: borrar una rama no debe borrar a sus miembros
     @JsonIgnore 
     private List<Miembro> miembros;
 

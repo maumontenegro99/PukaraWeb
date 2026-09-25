@@ -4,6 +4,7 @@ import { TemaProvider } from './context/TemaContext';
 
 import PortalLayout from './layouts/PortalLayout';
 import AdminLayout from './layouts/AdminLayout';
+import { SoloAdmin } from '@/components/admin/SoloAdmin';
 import BibliotecaLayout from './layouts/BibliotecaLayout';
 
 import PortalHome from './pages/portal/PortalHome';
@@ -79,8 +80,22 @@ function App() {
               <Route path="noticias/:id" element={<EditorNoticia />} />
               <Route path="biblioteca" element={<AdminDocumentos />} />
               <Route path="autorizaciones" element={<AdminAutorizaciones />} />
-              <Route path="pagos" element={<AdminPagos />} />
-              <Route path="pagos/:id" element={<AdminCobro />} />
+              <Route
+                path="pagos"
+                element={
+                  <SoloAdmin>
+                    <AdminPagos />
+                  </SoloAdmin>
+                }
+              />
+              <Route
+                path="pagos/:id"
+                element={
+                  <SoloAdmin>
+                    <AdminCobro />
+                  </SoloAdmin>
+                }
+              />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

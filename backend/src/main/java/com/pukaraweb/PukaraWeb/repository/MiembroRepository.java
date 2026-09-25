@@ -12,4 +12,6 @@ import com.pukaraweb.PukaraWeb.model.Miembro;
 public interface MiembroRepository extends JpaRepository<Miembro, Long> {
 
     List<Miembro> findByRamaIdIn(Collection<Long> ramaIds);
+
+    boolean existsByRamaId(Long ramaId);
 }

@@ -5,9 +5,12 @@ import com.pukaraweb.PukaraWeb.dto.LoginRequest;
 import com.pukaraweb.PukaraWeb.security.JwtUtil;
 import com.pukaraweb.PukaraWeb.service.UsuarioService; // Usamos esto para cargar detalles
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,8 +45,9 @@ public class AuthController {
             // 4. Lo devolvemos
             return ResponseEntity.ok(new AuthResponse(jwt));
 
-        } catch (Exception e) {
-            return ResponseEntity.status(403).body("Credenciales Incorrectas");
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
+                    "Usuario o contraseña incorrectos."));
         }
     }
 }

@@ -25,8 +25,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { NavUser } from '@/components/admin/NavUser';
+import { usePerfil } from '@/context/PerfilContext';
 import insignia from '@/assets/insignia.png';
 
 export const SECCIONES = [
@@ -47,7 +49,7 @@ export const SECCIONES = [
   },
   {
     titulo: 'Finanzas',
-    items: [{ to: '/admin/pagos', label: 'Pagos', icon: WalletIcon }],
+    items: [{ to: '/admin/pagos', label: 'Pagos', icon: WalletIcon, soloAdmin: true }],
   },
   {
     titulo: 'Comunicación',
@@ -62,15 +64,20 @@ export const SECCIONES = [
   },
 ];
 
+// Secciones del menú que puede usar el rol actual (se omiten las que quedan vacías).
+export const seccionesPara = (esAdmin) =>
+  SECCIONES.map((s) => ({ ...s, items: s.items.filter((i) => esAdmin || !i.soloAdmin) })).filter((s) => s.items.length > 0);
+
 function ItemNav({ to, label, icon, end }) {
   const Icon = icon;
   const { pathname } = useLocation();
   const activo = end ? pathname === to : pathname.startsWith(to);
+  const { setOpenMobile } = useSidebar();
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton isActive={activo} tooltip={label} asChild>
-        <Link to={to} aria-current={activo ? 'page' : undefined}>
+        <Link to={to} aria-current={activo ? 'page' : undefined} onClick={() => setOpenMobile(false)}>
           <Icon />
           <span>{label}</span>
         </Link>
@@ -80,13 +87,18 @@ function ItemNav({ to, label, icon, end }) {
 }
 
 export function AppSidebar() {
+  const { esAdmin } = usePerfil();
+  // En celular la barra es un panel deslizable: se cierra al elegir un destino (en escritorio no hace nada).
+  const { setOpenMobile } = useSidebar();
+  const cerrarEnCelular = () => setOpenMobile(false);
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link to="/admin">
+              <Link to="/admin" onClick={cerrarEnCelular}>
                 <img src={insignia} alt="" className="size-8 object-contain" />
                 <div className="flex flex-col leading-tight">
                   <span className="font-display text-lg uppercase">Pukara Weche</span>
@@ -106,13 +118,13 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {SECCIONES.map((seccion) => (
+        {seccionesPara(esAdmin).map((seccion) => (
           <SidebarGroup key={seccion.titulo}>
             <SidebarGroupLabel>{seccion.titulo}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {seccion.items.map((item) => (
-                  <ItemNav key={item.to} {...item} />
+                  <ItemNav key={item.to} to={item.to} label={item.label} icon={item.icon} />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -124,7 +136,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Ver sitio público" asChild>
-              <Link to="/">
+              <Link to="/" onClick={cerrarEnCelular}>
                 <ExternalLinkIcon />
                 <span>Ver sitio público</span>
               </Link>
@@ -132,7 +144,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Ver biblioteca" asChild>
-              <Link to="/biblioteca">
+              <Link to="/biblioteca" onClick={cerrarEnCelular}>
                 <LibraryIcon />
                 <span>Ver biblioteca</span>
               </Link>

@@ -109,9 +109,20 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173. Para entrar al panel usa `admin` / `admin123`.
+Abre http://localhost:5173. Para entrar al panel usa `admin` / `admin123` (administración) o `dirigente` / `dirigente123`
+(dirigente: no ve Pagos ni la documentación de otros dirigentes, y ve las autorizaciones sin poder aprobarlas).
 
-> ⚠️ Esas credenciales son solo para desarrollo local. Antes de publicar la plataforma hay que cambiarlas (ver el roadmap).
+> ⚠️ Esas credenciales existen solo en el perfil de desarrollo (`dev`).
+
+### Producción
+
+Fuera del perfil `dev` los secretos se leen de variables de entorno; sin ellas el backend no arranca:
+
+| Variable | Para qué |
+|---|---|
+| `DB_USER`, `DB_PASSWORD` | Usuario y contraseña de MySQL |
+| `JWT_SECRETO` | Clave para firmar las sesiones, de al menos 32 caracteres (`openssl rand -base64 48`) |
+| `ADMIN_CLAVE_INICIAL` | Opcional: contraseña del usuario `admin` que se crea en el primer arranque. Cámbiala después desde "Mi perfil" |
 
 ### Pruebas
 
@@ -152,7 +163,8 @@ PukaraWeb/
 - [x] Biblioteca de documentos y autorizaciones firmadas para campamentos
 - [x] Documentación de dirigentes guardada en su ficha
 - [x] Rediseño con identidad propia, modo oscuro y diseño adaptable a celular
-- [ ] Seguridad antes de publicar: roles de usuario, credenciales fuera del código y protección de datos personales
+- [x] Seguridad, fase 1: roles de usuario, credenciales fuera del código, perfil sin datos sensibles y sesiones vencidas con 401
+- [ ] Seguridad, fase 2: validación de datos de entrada (DTOs) en los módulos antiguos
 - [ ] Imágenes de noticias en almacenamiento de archivos
 - [x] Pagos por transferencia con confirmación de un administrador
 - [ ] Despliegue en producción

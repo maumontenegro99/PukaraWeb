@@ -4,9 +4,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,12 +18,22 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // Esta es tu "llave maestra" secreta. En producción debería estar en application.properties
-    // Debe ser larga y segura para HS256 (al menos 256 bits)
-    private static final String SECRET_KEY = "pukara_weche_scout_secret_key_super_segura_2025";
+    // HS256 exige una clave de al menos 256 bits.
+    private static final int LARGO_MINIMO_SECRETO = 32;
+
+    private final Key signingKey;
+
+    public JwtUtil(@Value("${pukara.jwt.secreto}") String secreto) {
+        byte[] bytes = secreto.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < LARGO_MINIMO_SECRETO) {
+            throw new IllegalStateException("pukara.jwt.secreto (variable JWT_SECRETO) debe tener al menos "
+                    + LARGO_MINIMO_SECRETO + " caracteres.");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(bytes);
+    }
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        return signingKey;
     }
 
     public String extractUsername(String token) {

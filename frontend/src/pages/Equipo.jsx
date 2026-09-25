@@ -31,6 +31,8 @@ import { Encabezado } from '@/components/admin/Encabezado';
 import { RamaBadge } from '@/components/admin/RamaBadge';
 import { DOCUMENTOS, faltantes } from '@/lib/documentacion';
 import { api, incluye, useDatosPanel } from '@/lib/panel';
+import { cn } from '@/lib/utils';
+import { usePerfil } from '@/context/PerfilContext';
 
 const SIN_RAMA = 'SIN_RAMA';
 const TODAS = 'TODAS';
@@ -39,26 +41,29 @@ const VACIO = {
   ...Object.fromEntries(DOCUMENTOS.map((d) => [d.campo, false])),
 };
 
+// Sin `onAbrir` (quien no es administrador no ve los archivos) el estado se muestra sin botón.
 function EstadoDocumentos({ dirigente, onAbrir }) {
   const faltan = faltantes(dirigente);
+  const Elemento = onAbrir ? 'button' : 'span';
+  const accion = onAbrir ? { type: 'button', onClick: onAbrir } : {};
   if (faltan.length === 0) {
     return (
-      <Badge asChild variant="secondary" className="cursor-pointer gap-1">
-        <button type="button" onClick={onAbrir}>
+      <Badge asChild variant="secondary" className={cn('gap-1', onAbrir && 'cursor-pointer')}>
+        <Elemento {...accion}>
           <CircleCheckIcon />
           Completa
-        </button>
+        </Elemento>
       </Badge>
     );
   }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Badge asChild variant="outline" className="cursor-pointer gap-1 border-destructive/40 text-destructive">
-          <button type="button" onClick={onAbrir}>
+        <Badge asChild variant="outline" className={cn('gap-1 border-destructive/40 text-destructive', onAbrir && 'cursor-pointer')}>
+          <Elemento {...accion}>
             <CircleAlertIcon />
             Faltan {faltan.length} de {DOCUMENTOS.length}
-          </button>
+          </Elemento>
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
@@ -217,6 +222,7 @@ function FormularioDirigente({ abierto, onCambio, dirigente, ramas, onGuardado }
 
 function Equipo() {
   const location = useLocation();
+  const { esAdmin } = usePerfil();
   const { dirigentes, ramas, estado, recargar } = useDatosPanel({ dirigentes: '/api/dirigentes', ramas: '/api/ramas' });
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(false);
@@ -371,14 +377,16 @@ function Equipo() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <EstadoDocumentos dirigente={d} onAbrir={() => setDocumentosDe(d.id)} />
+                    <EstadoDocumentos dirigente={d} onAbrir={esAdmin ? () => setDocumentosDe(d.id) : undefined} />
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setDocumentosDe(d.id)}>
-                        <FolderOpenIcon data-icon="inline-start" />
-                        Documentos
-                      </Button>
+                      {esAdmin && (
+                        <Button variant="ghost" size="sm" onClick={() => setDocumentosDe(d.id)}>
+                          <FolderOpenIcon data-icon="inline-start" />
+                          Documentos
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" aria-label={`Editar a ${d.nombres}`} onClick={() => setEditando(d)}>
                         <PencilIcon />
                       </Button>

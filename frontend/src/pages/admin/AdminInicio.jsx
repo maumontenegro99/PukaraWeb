@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { PenLineIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { SECCIONES } from '@/components/admin/AppSidebar';
+import { seccionesPara } from '@/components/admin/AppSidebar';
+import { usePerfil } from '@/context/PerfilContext';
 
 const DESCRIPCIONES = {
   '/admin/ramas': 'Unidades del grupo, su equipo y sus integrantes.',
@@ -17,6 +18,8 @@ const DESCRIPCIONES = {
 };
 
 export default function AdminInicio() {
+  const { esAdmin } = usePerfil();
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -32,7 +35,7 @@ export default function AdminInicio() {
         </Button>
       </div>
 
-      {SECCIONES.map((seccion) => (
+      {seccionesPara(esAdmin).map((seccion) => (
         <section key={seccion.titulo} className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-muted-foreground">{seccion.titulo}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

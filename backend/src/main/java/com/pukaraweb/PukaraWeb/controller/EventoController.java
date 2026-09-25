@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,7 +38,12 @@ public class EventoController {
     }
 
     @PostMapping
-    public Evento guardar(@RequestBody Evento evento) {
+    public Evento guardar(@RequestBody Evento evento, Authentication autenticacion) {
+        // Solo administración decide si un evento pide autorización; para el resto se conserva el valor guardado
+        boolean esAdmin = autenticacion.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (!esAdmin) {
+            evento.setRequiereAutorizacion(null);
+        }
         return service.guardar(evento);
     }
 

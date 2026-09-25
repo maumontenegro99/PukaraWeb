@@ -1,6 +1,7 @@
 package com.pukaraweb.PukaraWeb.security;
 
-import com.pukaraweb.PukaraWeb.service.UsuarioService; // OJO: Crearemos este servicio en breve
+import com.pukaraweb.PukaraWeb.service.UsuarioService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -30,26 +32,29 @@ public class JwtFilter extends OncePerRequestFilter {
 
         final String authorizationHeader = request.getHeader("Authorization");
 
-        String username = null;
-        String jwt = null;
-
         // El token viene como "Bearer eyJhbGciOiJIUzI1Ni..."
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            jwt = authorizationHeader.substring(7);
-            username = jwtUtil.extractUsername(jwt);
-        }
-
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.usuarioService.loadUserByUsername(username);
-
-            if (jwtUtil.validateToken(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken
-                        .setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                autenticar(authorizationHeader.substring(7), request);
+            } catch (JwtException | IllegalArgumentException | UsernameNotFoundException e) {
+                // Token vencido, mal formado, con firma inválida o de un usuario que ya no existe: la petición sigue sin
+                // sesión y, si la ruta la exige, Spring Security responde 401.
+                SecurityContextHolder.clearContext();
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private void autenticar(String jwt, HttpServletRequest request) {
+        String username = jwtUtil.extractUsername(jwt);
+        UserDetails userDetails = usuarioService.loadUserByUsername(username);
+
+        if (jwtUtil.validateToken(jwt, userDetails)) {
+            UsernamePasswordAuthenticationToken autenticacion = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            autenticacion.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(autenticacion);
+        }
     }
 }
