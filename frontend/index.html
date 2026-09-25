@@ -10,7 +10,12 @@
       // Aplica el tema guardado antes de pintar la página, para evitar un destello claro al cargar en modo oscuro.
       try {
         var tema = localStorage.getItem('tema') || 'sistema';
-        var oscuro = tema === 'oscuro' || (tema === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var hora = new Date().getHours();
+        // 'horario': oscuro de 20:00 a 7:00 (misma regla que src/lib/tema.js).
+        var oscuro =
+          tema === 'oscuro' ||
+          (tema === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+          (tema === 'horario' && (hora >= 20 || hora < 7));
         if (oscuro) document.documentElement.classList.add('dark');
       } catch (e) {}
     </script>

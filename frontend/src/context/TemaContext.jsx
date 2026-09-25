@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { esHoraOscura } from '@/lib/tema';
 
-// Tema de la interfaz: 'claro', 'oscuro' o 'sistema' (sigue la preferencia del dispositivo).
+// Tema de la interfaz: 'claro', 'oscuro', 'horario' (oscuro de noche, ver lib/tema.js) o 'sistema' (sigue la preferencia
+// del dispositivo; es el valor inicial mientras la persona no elige otro).
 // index.html aplica el tema guardado antes de que cargue React, para que no haya destello.
-const TemaContext = createContext({ tema: 'sistema', oscuro: false, cambiarTema: () => {} });
+const TemaContext = createContext({ tema: 'sistema', oscuro: false, cambiarTema: () => {}, alternar: () => {} });
 
 const CLAVE = 'tema';
 const consulta = () => window.matchMedia('(prefers-color-scheme: dark)');
@@ -18,6 +20,7 @@ function leerTema() {
 export function TemaProvider({ children }) {
   const [tema, setTema] = useState(leerTema);
   const [sistemaOscuro, setSistemaOscuro] = useState(() => consulta().matches);
+  const [nocturno, setNocturno] = useState(() => esHoraOscura());
 
   useEffect(() => {
     const medios = consulta();
@@ -26,7 +29,16 @@ export function TemaProvider({ children }) {
     return () => medios.removeEventListener('change', alCambiar);
   }, []);
 
-  const oscuro = tema === 'oscuro' || (tema === 'sistema' && sistemaOscuro);
+  // En modo horario se revisa la hora cada minuto para cambiar solo al llegar la noche o la mañana.
+  useEffect(() => {
+    if (tema !== 'horario') return;
+    const revisar = () => setNocturno(esHoraOscura());
+    const intervalo = setInterval(revisar, 60_000);
+    return () => clearInterval(intervalo);
+  }, [tema]);
+
+  const oscuro =
+    tema === 'oscuro' || (tema === 'sistema' && sistemaOscuro) || (tema === 'horario' && nocturno);
 
   useEffect(() => {
     const raiz = document.documentElement;
@@ -39,6 +51,7 @@ export function TemaProvider({ children }) {
   }, [oscuro]);
 
   const cambiarTema = (nuevo) => {
+    if (nuevo === 'horario') setNocturno(esHoraOscura());
     setTema(nuevo);
     try {
       localStorage.setItem(CLAVE, nuevo);
@@ -47,7 +60,10 @@ export function TemaProvider({ children }) {
     }
   };
 
-  return <TemaContext.Provider value={{ tema, oscuro, cambiarTema }}>{children}</TemaContext.Provider>;
+  // Cambia al modo contrario del que se ve ahora (y deja de seguir la hora o el dispositivo).
+  const alternar = () => cambiarTema(oscuro ? 'claro' : 'oscuro');
+
+  return <TemaContext.Provider value={{ tema, oscuro, cambiarTema, alternar }}>{children}</TemaContext.Provider>;
 }
 
 export const useTema = () => useContext(TemaContext);
