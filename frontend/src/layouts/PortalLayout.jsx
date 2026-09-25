@@ -11,17 +11,15 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import insignia from '@/assets/insignia.png';
 import logoAsociacion from '@/assets/logo-asosiacion.png';
-import iconoGmail from '@/assets/icon-mail.png';
 import iconoMaps from '@/assets/icon-map.png';
-import iconoInstagram from '@/assets/icon-instagram.png';
-import iconoFacebook from '@/assets/icon-facebook.png';
+import { IconoCorreo, IconoFacebook, IconoInstagram } from '@/components/brand/IconosContacto';
 
-// `clase` corrige cada ícono: el de Maps es negro (se invierte a blanco) y el de Instagram trae margen propio.
+// Íconos blancos de un solo color. El de Maps es una imagen negra que se invierte; el resto son SVG (`components/brand/IconosContacto`).
 const CONTACTOS = [
-  { href: 'mailto:pukaraweche@gmail.com', red: 'Correo', icono: iconoGmail, texto: 'pukaraweche@gmail.com', externo: false },
-  { href: 'https://maps.app.goo.gl/WWYeVVZFBZ2wPEYe7', red: 'Google Maps', icono: iconoMaps, texto: 'Cómo llegar a la sede', clase: 'invert' },
-  { href: 'https://www.instagram.com/pukaraweche', red: 'Instagram', icono: iconoInstagram, texto: '@pukaraweche', clase: 'scale-[1.4]' },
-  { href: 'https://www.facebook.com/pukaraweche', red: 'Facebook', icono: iconoFacebook, texto: 'Pukara Weche', clase: 'rounded-[4px]' },
+  { href: 'mailto:pukaraweche@gmail.com', red: 'Correo', Icono: IconoCorreo, texto: 'pukaraweche@gmail.com', externo: false },
+  { href: 'https://maps.app.goo.gl/WWYeVVZFBZ2wPEYe7', red: 'Google Maps', imagen: iconoMaps, texto: 'Cómo llegar a la sede' },
+  { href: 'https://www.instagram.com/pukaraweche', red: 'Instagram', Icono: IconoInstagram, texto: '@pukaraweche' },
+  { href: 'https://www.facebook.com/pukaraweche', red: 'Facebook', Icono: IconoFacebook, texto: 'Pukara Weche' },
 ];
 
 const ENLACES = [
@@ -132,7 +130,7 @@ export default function PortalLayout() {
 
           <div className="flex flex-col gap-3 text-sm">
             <span className="font-semibold text-white">Contacto</span>
-            {CONTACTOS.map(({ href, red, icono, texto, clase, externo = true }) => (
+            {CONTACTOS.map(({ href, red, Icono, imagen, texto, externo = true }) => (
               <a
                 key={href}
                 href={href}
@@ -140,7 +138,7 @@ export default function PortalLayout() {
                 className="inline-flex w-fit items-center gap-3 rounded-md hover:text-white focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <span className="flex size-6 shrink-0 items-center justify-center">
-                  <img src={icono} alt="" className={cn('size-full object-contain', clase)} />
+                  {Icono ? <Icono className="size-full text-white" /> : <img src={imagen} alt="" className="size-full object-contain invert" />}
                 </span>
                 <span>
                   <span className="sr-only">{red}: </span>
